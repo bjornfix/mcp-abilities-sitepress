@@ -1,9 +1,9 @@
-=== MCP Abilities - SitePress Multilingual CMS ===
+=== MCP Abilities - SitePress ===
 Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.2.4
+Stable tag: 0.2.5
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,6 +20,8 @@ This plugin exposes core WPML translation workflows through MCP:
 
 Use it to inspect translation mappings, create missing translation shells, and run untranslated-content checks before publishing.
 
+Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
+
 == Installation ==
 
 1. Install and activate MCP Expose Abilities
@@ -28,6 +30,11 @@ Use it to inspect translation mappings, create missing translation shells, and r
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.2.5 =
+* Renamed plugin display name to SitePress for trademark-safe naming
+* Removed site-specific wording from documentation
+* Added link to plugin page on devenia.com
 
 = 0.2.4 =
 * Added output schemas and MCP meta annotations for all abilities

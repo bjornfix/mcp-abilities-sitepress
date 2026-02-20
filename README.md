@@ -1,8 +1,8 @@
-# MCP Abilities - SitePress Multilingual CMS
+# MCP Abilities - SitePress
 
 Small bridge plugin that exposes WPML translation mapping as MCP abilities.
 
-**Stable tag:** 0.2.4
+**Stable tag:** 0.2.5
 
 ## Abilities
 
@@ -12,13 +12,14 @@ Small bridge plugin that exposes WPML translation mapping as MCP abilities.
 
 ## Why this exists
 
-`gmekka.devenia.com` has WPML active, but the existing MCP abilities do not expose
-translation linkage (source page -> target page). This plugin adds that missing
-control layer so translation can run page-by-page without guessing IDs, and adds
-an automatic language-agnostic QA check before publish.
+WPML handles translation, but MCP workflows still need explicit translation
+linkage controls (source page -> target page). This plugin adds that control
+layer so translation can run page-by-page without guessing IDs, and adds an
+automatic language-agnostic QA check before publish.
 
 ## Notes
 
+- Plugin page: [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/)
 - Requires `abilities-api` and WPML (`sitepress-multilingual-cms`) to be active.
 - `wpml/ensure-page-translation` can create target translation shells and copy
   Elementor metadata from source pages.

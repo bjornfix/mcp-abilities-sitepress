@@ -48,6 +48,7 @@ function mcp_wpml_lang_details(int $page_id) {
 function mcp_wpml_get_active_languages(bool $skip_missing = false): array {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 	$languages = apply_filters(
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 		'wpml_active_languages',
 		null,
 		array(

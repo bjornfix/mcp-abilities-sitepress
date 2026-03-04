@@ -6,13 +6,13 @@ SitePress (WPML) translation management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 0.2.5
+**Stable tag:** 0.3.0
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
 ## What It Does
 
-This add-on plugin exposes SitePress (WPML) translation workflows through MCP (Model Context Protocol). Your AI assistant can inspect translation mapping, create missing translation shells, and run untranslated-content checks before publish.
+This add-on plugin exposes SitePress (WPML) workflows through MCP (Model Context Protocol). Your AI assistant can inspect translation mapping, create missing translation shells, run untranslated-content checks, and safely inspect/recover WPML language-switcher state.
 
 **Part of the [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/) ecosystem.**
 
@@ -31,13 +31,20 @@ This add-on plugin exposes SitePress (WPML) translation workflows through MCP (M
 3. Upload via WordPress Admin > Plugins > Add New > Upload Plugin
 4. Activate the plugin
 
-## Abilities (3)
+## Abilities (9)
 
 | Ability | Description |
 |---------|-------------|
 | `wpml/list-page-translation-status` | List translation status for source pages and target languages |
 | `wpml/ensure-page-translation` | Create and link a target translation shell for a source page |
 | `wpml/detect-untranslated-content` | Detect copied/untranslated source-language fragments in target content |
+| `wpml/list-active-languages` | List active WPML languages with normalized metadata |
+| `wpml/get-element-language-details` | Read normalized WPML language details for a page/post element |
+| `wpml/get-language-switcher-settings` | Read normalized WPML language-switcher settings and overview |
+| `wpml/list-language-switcher-slots` | Inspect language-switcher slots across statics, menus, and sidebars |
+| `wpml/validate-language-switcher-settings` | Validate WPML language-switcher option structure before changes |
+| `wpml/reset-language-switcher-settings` | Delete switcher settings so WPML can rebuild them |
+| `wpml/rebuild-language-switcher-settings` | Reset and re-read switcher settings through a recovery path |
 
 ## Usage Examples
 
@@ -82,6 +89,11 @@ This add-on plugin exposes SitePress (WPML) translation workflows through MCP (M
 ```
 
 ## Changelog
+
+### 0.3.0
+- Added safe WPML administration abilities around active languages and element language details
+- Added language-switcher inspection, slot listing, validation, reset, and rebuild abilities
+- Hardened WPML operational workflow so switcher recovery no longer depends on raw option writes
 
 ### 0.2.5
 - Renamed plugin display name to SitePress for trademark-safe naming

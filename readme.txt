@@ -3,12 +3,12 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.2.5
+Stable tag: 0.3.0
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-WPML translation mapping and translation-shell helper abilities for MCP.
+WPML translation, language metadata, and language-switcher recovery abilities for MCP.
 
 == Description ==
 
@@ -17,8 +17,15 @@ This plugin exposes core WPML translation workflows through MCP:
 * `wpml/list-page-translation-status`
 * `wpml/ensure-page-translation`
 * `wpml/detect-untranslated-content`
+* `wpml/list-active-languages`
+* `wpml/get-element-language-details`
+* `wpml/get-language-switcher-settings`
+* `wpml/list-language-switcher-slots`
+* `wpml/validate-language-switcher-settings`
+* `wpml/reset-language-switcher-settings`
+* `wpml/rebuild-language-switcher-settings`
 
-Use it to inspect translation mappings, create missing translation shells, and run untranslated-content checks before publishing.
+Use it to inspect translation mappings, create missing translation shells, run untranslated-content checks, and safely inspect/recover WPML language-switcher state.
 
 Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 
@@ -30,6 +37,11 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.0 =
+* Added active-language and element-language detail abilities
+* Added WPML language-switcher inspection, validation, reset, and rebuild abilities
+* Expanded the plugin into a safer WPML operations surface for automation
 
 = 0.2.5 =
 * Renamed plugin display name to SitePress for trademark-safe naming

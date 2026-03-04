@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.2.5
+ * Version: 0.3.0
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -43,6 +43,167 @@ function mcp_wpml_lang_details(int $page_id) {
 		)
 	);
 	return is_object($details) ? $details : null;
+}
+
+function mcp_wpml_get_active_languages(bool $skip_missing = false): array {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+	$languages = apply_filters(
+		'wpml_active_languages',
+		null,
+		array(
+			'skip_missing' => $skip_missing ? 1 : 0,
+			'orderby'      => 'code',
+			'order'        => 'asc',
+		)
+	);
+
+	return is_array($languages) ? $languages : array();
+}
+
+function mcp_wpml_language_switcher_option(): array {
+	$value = get_option('wpml_language_switcher', array());
+	return is_array($value) ? $value : array();
+}
+
+function mcp_wpml_normalize_scalar($value) {
+	if (is_string($value) || is_int($value) || is_float($value) || is_bool($value) || null === $value) {
+		return $value;
+	}
+
+	if (is_array($value)) {
+		$out = array();
+		foreach ($value as $key => $item) {
+			$out[(string) $key] = mcp_wpml_normalize_scalar($item);
+		}
+		return $out;
+	}
+
+	if (is_object($value)) {
+		$out = array(
+			'__class' => get_class($value),
+		);
+
+		if (method_exists($value, 'get')) {
+			$out['__has_get'] = true;
+		}
+
+		foreach (get_object_vars($value) as $key => $item) {
+			$out[(string) $key] = mcp_wpml_normalize_scalar($item);
+		}
+
+		return $out;
+	}
+
+	return (string) $value;
+}
+
+function mcp_wpml_describe_slot($slot): array {
+	$type = gettype($slot);
+	$class = is_object($slot) ? get_class($slot) : '';
+	$data = mcp_wpml_normalize_scalar($slot);
+	$is_empty = false;
+	$has_get = false;
+	$suspicious = false;
+	$reason = '';
+
+	if (is_array($slot)) {
+		$is_empty = empty($slot);
+		$suspicious = !$is_empty;
+		$reason = $suspicious ? 'Array slot payload is risky for WPML language switcher state.' : '';
+	} elseif (is_object($slot)) {
+		$vars = get_object_vars($slot);
+		$is_empty = empty($vars);
+		$has_get = method_exists($slot, 'get');
+		$suspicious = !$is_empty && !$has_get;
+		$reason = $suspicious ? 'Non-empty object slot payload without get() method is risky for WPML language switcher state.' : '';
+	} else {
+		$is_empty = empty($slot);
+		$suspicious = !$is_empty;
+		$reason = $suspicious ? 'Unexpected non-object slot payload type.' : '';
+	}
+
+	return array(
+		'type'       => $type,
+		'class'      => $class,
+		'is_empty'   => $is_empty,
+		'has_get'    => $has_get,
+		'suspicious' => $suspicious,
+		'reason'     => $reason,
+		'data'       => $data,
+	);
+}
+
+function mcp_wpml_collect_language_switcher_slots(array $settings): array {
+	$slots = array();
+
+	$statics = isset($settings['statics']) && is_array($settings['statics']) ? $settings['statics'] : array();
+	foreach ($statics as $slot_name => $slot_value) {
+		$slots[] = array_merge(
+			array(
+				'group' => 'statics',
+				'name'  => (string) $slot_name,
+			),
+			mcp_wpml_describe_slot($slot_value)
+		);
+	}
+
+	foreach (array('menus', 'sidebars') as $group) {
+		$group_value = $settings[$group] ?? array();
+		if (!is_array($group_value)) {
+			$slots[] = array(
+				'group'      => $group,
+				'name'       => '__invalid_group__',
+				'type'       => gettype($group_value),
+				'class'      => is_object($group_value) ? get_class($group_value) : '',
+				'is_empty'   => empty($group_value),
+				'has_get'    => false,
+				'suspicious' => true,
+				'reason'     => 'Expected array group for language switcher settings.',
+				'data'       => mcp_wpml_normalize_scalar($group_value),
+			);
+			continue;
+		}
+
+		foreach ($group_value as $slot_name => $slot_value) {
+			$slots[] = array_merge(
+				array(
+					'group' => $group,
+					'name'  => (string) $slot_name,
+				),
+				mcp_wpml_describe_slot($slot_value)
+			);
+		}
+	}
+
+	return $slots;
+}
+
+function mcp_wpml_language_switcher_overview(array $settings): array {
+	$slots = mcp_wpml_collect_language_switcher_slots($settings);
+	$suspicious = array_values(array_filter($slots, static function (array $slot): bool {
+		return !empty($slot['suspicious']);
+	}));
+
+	return array(
+		'languages_order' => isset($settings['languages_order']) && is_array($settings['languages_order']) ? array_values($settings['languages_order']) : array(),
+		'menu_slot_count' => isset($settings['menus']) && is_array($settings['menus']) ? count($settings['menus']) : 0,
+		'sidebar_slot_count' => isset($settings['sidebars']) && is_array($settings['sidebars']) ? count($settings['sidebars']) : 0,
+		'static_slot_count' => isset($settings['statics']) && is_array($settings['statics']) ? count($settings['statics']) : 0,
+		'slot_count' => count($slots),
+		'suspicious_slot_count' => count($suspicious),
+		'suspicious_slots' => array_map(
+			static function (array $slot): array {
+				return array(
+					'group'  => $slot['group'],
+					'name'   => $slot['name'],
+					'type'   => $slot['type'],
+					'class'  => $slot['class'],
+					'reason' => $slot['reason'],
+				);
+			},
+			$suspicious
+		),
+	);
 }
 
 function mcp_wpml_copy_elementor_meta(int $source_id, int $target_id): void {
@@ -324,6 +485,406 @@ function mcp_wpml_register_abilities(): void {
 	if (!mcp_wpml_ready()) {
 		return;
 	}
+
+	$list_active_languages = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$skip_missing = !empty($input['skip_missing']);
+		$languages = mcp_wpml_get_active_languages($skip_missing);
+		$rows = array();
+
+		foreach ($languages as $code => $language) {
+			if (!is_array($language)) {
+				continue;
+			}
+
+			$rows[] = array(
+				'code'                => (string) ($language['code'] ?? $code),
+				'native_name'         => (string) ($language['native_name'] ?? ''),
+				'translated_name'     => (string) ($language['translated_name'] ?? ''),
+				'default_locale'      => (string) ($language['default_locale'] ?? ''),
+				'language_code'       => (string) ($language['language_code'] ?? ''),
+				'default'             => !empty($language['default_locale']) && ((string) ($language['code'] ?? $code) === mcp_wpml_default_lang()),
+				'active'              => !empty($language['active']),
+				'missing'             => !empty($language['missing']),
+				'country_flag_url'    => (string) ($language['country_flag_url'] ?? ''),
+				'url'                 => (string) ($language['url'] ?? ''),
+			);
+		}
+
+		return array(
+			'success'      => true,
+			'skip_missing' => $skip_missing,
+			'default_lang' => mcp_wpml_default_lang(),
+			'languages'    => $rows,
+			'total'        => count($rows),
+		);
+	};
+
+	wp_register_ability(
+		'wpml/list-active-languages',
+		array(
+			'label' => 'List Active Languages',
+			'description' => 'Lists active WPML languages with normalized metadata for safe automation.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'skip_missing' => array('type' => 'boolean', 'default' => false),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'skip_missing' => array('type' => 'boolean'),
+					'default_lang' => array('type' => 'string'),
+					'languages' => array('type' => 'array'),
+					'total' => array('type' => 'integer'),
+				),
+			),
+			'execute_callback' => $list_active_languages,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$get_element_language_details = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$id = isset($input['id']) ? (int) $input['id'] : 0;
+
+		if ($id <= 0) {
+			return array('success' => false, 'message' => 'id is required.');
+		}
+
+		$post = get_post($id);
+		if (!$post) {
+			return array('success' => false, 'message' => 'Element not found.');
+		}
+
+		$details = mcp_wpml_lang_details($id);
+		if (!$details) {
+			return array('success' => false, 'message' => 'Could not resolve WPML language details.');
+		}
+
+		return array(
+			'success' => true,
+			'id' => $id,
+			'post_type' => (string) $post->post_type,
+			'post_status' => (string) $post->post_status,
+			'title' => (string) get_the_title($id),
+			'trid' => isset($details->trid) ? (int) $details->trid : 0,
+			'language_code' => (string) ($details->language_code ?? ''),
+			'source_language_code' => (string) ($details->source_language_code ?? ''),
+		);
+	};
+
+	wp_register_ability(
+		'wpml/get-element-language-details',
+		array(
+			'label' => 'Get Element Language Details',
+			'description' => 'Returns normalized WPML language details for a page/post element.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'required' => array('id'),
+				'properties' => array(
+					'id' => array('type' => 'integer'),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'id' => array('type' => 'integer'),
+					'post_type' => array('type' => 'string'),
+					'post_status' => array('type' => 'string'),
+					'title' => array('type' => 'string'),
+					'trid' => array('type' => 'integer'),
+					'language_code' => array('type' => 'string'),
+					'source_language_code' => array('type' => 'string'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $get_element_language_details,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$get_language_switcher_settings = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$include_raw = !empty($input['include_raw']);
+		$settings = mcp_wpml_language_switcher_option();
+		$overview = mcp_wpml_language_switcher_overview($settings);
+
+		$response = array(
+			'success' => true,
+			'overview' => $overview,
+			'settings' => array(
+				'migrated' => isset($settings['migrated']) ? (int) $settings['migrated'] : 0,
+				'converted_menu_ids' => isset($settings['converted_menu_ids']) ? (int) $settings['converted_menu_ids'] : 0,
+				'languages_order' => $overview['languages_order'],
+				'link_empty' => isset($settings['link_empty']) ? (int) $settings['link_empty'] : 0,
+				'additional_css' => (string) ($settings['additional_css'] ?? ''),
+				'copy_parameters' => (string) ($settings['copy_parameters'] ?? ''),
+			),
+		);
+
+		if ($include_raw) {
+			$response['raw'] = mcp_wpml_normalize_scalar($settings);
+		}
+
+		return $response;
+	};
+
+	wp_register_ability(
+		'wpml/get-language-switcher-settings',
+		array(
+			'label' => 'Get Language Switcher Settings',
+			'description' => 'Returns normalized WPML language switcher settings with overview and optional raw normalized payload.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'include_raw' => array('type' => 'boolean', 'default' => false),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'overview' => array('type' => 'object'),
+					'settings' => array('type' => 'object'),
+					'raw' => array('type' => 'object'),
+				),
+			),
+			'execute_callback' => $get_language_switcher_settings,
+			'permission_callback' => function (): bool {
+				return current_user_can('manage_options');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$list_language_switcher_slots = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$only_suspicious = !empty($input['only_suspicious']);
+		$slots = mcp_wpml_collect_language_switcher_slots(mcp_wpml_language_switcher_option());
+
+		if ($only_suspicious) {
+			$slots = array_values(array_filter($slots, static function (array $slot): bool {
+				return !empty($slot['suspicious']);
+			}));
+		}
+
+		return array(
+			'success' => true,
+			'only_suspicious' => $only_suspicious,
+			'slots' => $slots,
+			'total' => count($slots),
+		);
+	};
+
+	wp_register_ability(
+		'wpml/list-language-switcher-slots',
+		array(
+			'label' => 'List Language Switcher Slots',
+			'description' => 'Lists WPML language-switcher slots across statics, menus, and sidebars with type and risk metadata.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'only_suspicious' => array('type' => 'boolean', 'default' => false),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'only_suspicious' => array('type' => 'boolean'),
+					'slots' => array('type' => 'array'),
+					'total' => array('type' => 'integer'),
+				),
+			),
+			'execute_callback' => $list_language_switcher_slots,
+			'permission_callback' => function (): bool {
+				return current_user_can('manage_options');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$validate_language_switcher_settings = function ($input = array()): array {
+		$settings = mcp_wpml_language_switcher_option();
+		$overview = mcp_wpml_language_switcher_overview($settings);
+		$is_valid = 0 === (int) $overview['suspicious_slot_count'];
+
+		return array(
+			'success' => true,
+			'valid' => $is_valid,
+			'overview' => $overview,
+			'message' => $is_valid
+				? 'No suspicious WPML language switcher slots detected.'
+				: 'Suspicious WPML language switcher slots detected. Review before modifying switcher state.',
+		);
+	};
+
+	wp_register_ability(
+		'wpml/validate-language-switcher-settings',
+		array(
+			'label' => 'Validate Language Switcher Settings',
+			'description' => 'Validates WPML language-switcher option structure and flags suspicious slot payloads before writes/recovery.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'valid' => array('type' => 'boolean'),
+					'overview' => array('type' => 'object'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $validate_language_switcher_settings,
+			'permission_callback' => function (): bool {
+				return current_user_can('manage_options');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$reset_language_switcher_settings = function ($input = array()): array {
+		$deleted = delete_option('wpml_language_switcher');
+		wp_cache_delete('wpml_language_switcher', 'options');
+
+		return array(
+			'success' => true,
+			'deleted' => (bool) $deleted,
+			'message' => $deleted
+				? 'WPML language switcher settings deleted. WPML can rebuild them on next access.'
+				: 'WPML language switcher settings were already absent or unchanged.',
+		);
+	};
+
+	wp_register_ability(
+		'wpml/reset-language-switcher-settings',
+		array(
+			'label' => 'Reset Language Switcher Settings',
+			'description' => 'Deletes the WPML language switcher option so WPML can rebuild it from defaults/internal state.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'deleted' => array('type' => 'boolean'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $reset_language_switcher_settings,
+			'permission_callback' => function (): bool {
+				return current_user_can('manage_options');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => false,
+					'destructive' => true,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$rebuild_language_switcher_settings = function ($input = array()): array {
+		delete_option('wpml_language_switcher');
+		wp_cache_delete('wpml_language_switcher', 'options');
+		$settings = mcp_wpml_language_switcher_option();
+		$overview = mcp_wpml_language_switcher_overview($settings);
+
+		return array(
+			'success' => true,
+			'overview' => $overview,
+			'settings' => mcp_wpml_normalize_scalar($settings),
+			'message' => 'WPML language switcher settings reset and re-read.',
+		);
+	};
+
+	wp_register_ability(
+		'wpml/rebuild-language-switcher-settings',
+		array(
+			'label' => 'Rebuild Language Switcher Settings',
+			'description' => 'Deletes and re-reads the WPML language switcher option to force a safe rebuild path.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'overview' => array('type' => 'object'),
+					'settings' => array('type' => 'object'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $rebuild_language_switcher_settings,
+			'permission_callback' => function (): bool {
+				return current_user_can('manage_options');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => false,
+					'destructive' => true,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
 
 		$list_page_translation_status = function ($input = array()): array {
 			$input = is_array($input) ? $input : array();

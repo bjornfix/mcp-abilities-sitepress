@@ -6,7 +6,7 @@ SitePress (WPML) translation management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 0.3.0
+**Stable tag:** 0.3.1
 **Requires PHP:** 8.0
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -97,6 +97,10 @@ This add-on plugin exposes SitePress (WPML) workflows through MCP (Model Context
 ```
 
 ## Changelog
+
+### 0.3.1
+- Docs: added explicit WordPress and PHP compatibility notes
+- Docs: corrected the documented ability count to match the current 10 registered abilities
 
 ### 0.3.0
 - Added safe WPML administration abilities around active languages and element language details

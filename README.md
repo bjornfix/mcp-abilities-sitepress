@@ -15,7 +15,24 @@ SitePress (WPML) translation management for WordPress via MCP.
 
 This add-on plugin exposes SitePress (WPML) workflows through MCP (Model Context Protocol). Your AI assistant can inspect translation mapping, create missing translation shells, run untranslated-content checks, and safely inspect/recover WPML language-switcher state.
 
-**Part of the [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/) ecosystem.**
+**Part of the [MCP Expose Abilities](https://github.com/bjornfix/mcp-expose-abilities) ecosystem.**
+
+This is one piece of a bigger open WordPress automation stack that lets AI agents do real multilingual maintenance instead of leaving teams buried in WPML admin work.
+
+## Why This Is Cool
+
+Translation QA, missing shells, and language-switcher recovery are the kind of jobs people avoid because they are slow and fiddly.
+
+This add-on makes that promptable. You can tell the agent to inspect translation status, create only the missing shells, detect copied source-language text, and keep multilingual cleanup moving without the usual admin fatigue.
+
+## Documentation
+
+- [Core Plugin: MCP Expose Abilities](https://github.com/bjornfix/mcp-expose-abilities)
+- [MCP Wiki Home](https://github.com/bjornfix/mcp-expose-abilities/wiki)
+- [Why Teams Use It](https://github.com/bjornfix/mcp-expose-abilities/wiki/Why-Teams-Use-It)
+- [Use Cases](https://github.com/bjornfix/mcp-expose-abilities/wiki/Use-Cases)
+- [SitePress / WPML Add-On Guide](https://github.com/bjornfix/mcp-expose-abilities/wiki/Addon-SitePress)
+- [Getting Started](https://github.com/bjornfix/mcp-expose-abilities/wiki/Getting-Started)
 
 ## Requirements
 
@@ -139,8 +156,19 @@ GPL-2.0+
 
 [Devenia](https://devenia.com) - We've been doing SEO and web development since 1993.
 
+## Free and Open
+
+Like the rest of the ecosystem, this add-on is free, open, and built from practical production work.
+
+## Star and Share
+
+If this add-on helps, please star the repo, share the ecosystem, and point people to the main wiki:
+
+- https://github.com/bjornfix/mcp-expose-abilities
+- https://github.com/bjornfix/mcp-expose-abilities/wiki
+
 ## Links
 
-- [Plugin Page](https://devenia.com/plugins/mcp-expose-abilities/)
 - [Core Plugin (MCP Expose Abilities)](https://github.com/bjornfix/mcp-expose-abilities)
-- [All Add-on Plugins](https://devenia.com/plugins/mcp-expose-abilities/#add-ons)
+- [Main Wiki](https://github.com/bjornfix/mcp-expose-abilities/wiki)
+- [SitePress / WPML Add-On Guide](https://github.com/bjornfix/mcp-expose-abilities/wiki/Addon-SitePress)

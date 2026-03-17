@@ -29,6 +29,13 @@ Use it to inspect translation mappings, create missing translation shells, run u
 
 Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 
+= Compatibility =
+
+* Requires WordPress 6.9 or newer
+* Tested up to WordPress 6.9
+* Requires PHP 8.0 or newer
+* Intended for sites running WPML SitePress within that same WordPress release line
+
 == Installation ==
 
 1. Install and activate MCP Expose Abilities

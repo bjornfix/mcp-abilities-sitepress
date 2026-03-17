@@ -7,6 +7,7 @@ SitePress (WPML) translation management for WordPress via MCP.
 
 **Tested up to:** 6.9
 **Stable tag:** 0.3.0
+**Requires PHP:** 8.0
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +25,13 @@ This add-on plugin exposes SitePress (WPML) workflows through MCP (Model Context
 - [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin
 - [WPML](https://wpml.org/) with SitePress active
 
+## WordPress Compatibility
+
+- Requires WordPress 6.9 or newer
+- Tested up to WordPress 6.9
+- Requires PHP 8.0 or newer
+- Intended for sites running WPML SitePress within that same WordPress release line
+
 ## Installation
 
 1. Install the required plugins (Abilities API, MCP Adapter, WPML/SitePress)
@@ -31,7 +39,7 @@ This add-on plugin exposes SitePress (WPML) workflows through MCP (Model Context
 3. Upload via WordPress Admin > Plugins > Add New > Upload Plugin
 4. Activate the plugin
 
-## Abilities (9)
+## Abilities (10)
 
 | Ability | Description |
 |---------|-------------|

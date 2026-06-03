@@ -19,6 +19,20 @@ function mcp_wpml_ready(): bool {
 	return function_exists('wp_register_ability') && defined('ICL_SITEPRESS_VERSION');
 }
 
+function mcp_wpml_filesystem() {
+	global $wp_filesystem;
+
+	if (!function_exists('WP_Filesystem')) {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+	}
+
+	if (!WP_Filesystem()) {
+		return null;
+	}
+
+	return is_object($wp_filesystem) ? $wp_filesystem : null;
+}
+
 function mcp_wpml_default_lang(): string {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 	$lang = apply_filters('wpml_default_language', null);
@@ -3554,29 +3568,30 @@ function mcp_wpml_register_abilities(): void {
 			'path' => '',
 		);
 
-		if ($clean_htaccess) {
-			$path = trailingslashit(ABSPATH) . '.htaccess';
-			$htaccess['checked'] = true;
-			$htaccess['path'] = $path;
-			$htaccess['writable'] = is_writable($path);
-			if (is_readable($path) && $htaccess['writable']) {
-				$contents = (string) file_get_contents($path);
-				$lines = preg_split("/(\r\n|\n|\r)/", $contents);
-				$new_lines = array();
-				foreach ($lines as $line) {
+			if ($clean_htaccess) {
+				$path = trailingslashit(ABSPATH) . '.htaccess';
+				$filesystem = mcp_wpml_filesystem();
+				$htaccess['checked'] = true;
+				$htaccess['path'] = $path;
+				$htaccess['writable'] = is_object($filesystem) && $filesystem->is_writable($path);
+				if (is_object($filesystem) && $filesystem->exists($path) && $htaccess['writable']) {
+					$contents = (string) $filesystem->get_contents($path);
+					$lines = preg_split("/(\r\n|\n|\r)/", $contents);
+					$new_lines = array();
+					foreach ($lines as $line) {
 					$normalized = trim((string) $line);
 					if (false !== strpos($normalized, $origin) && false !== strpos($normalized, $url)) {
 						$htaccess['removed_lines'][] = $line;
 						continue;
 					}
 					$new_lines[] = $line;
+					}
+					if (!empty($htaccess['removed_lines'])) {
+						$ending = false !== strpos($contents, "\r\n") ? "\r\n" : "\n";
+						$filesystem->put_contents($path, implode($ending, $new_lines), FS_CHMOD_FILE);
+						$htaccess['changed'] = true;
+					}
 				}
-				if (!empty($htaccess['removed_lines'])) {
-					$ending = false !== strpos($contents, "\r\n") ? "\r\n" : "\n";
-					file_put_contents($path, implode($ending, $new_lines));
-					$htaccess['changed'] = true;
-				}
-			}
 		}
 
 		return array(

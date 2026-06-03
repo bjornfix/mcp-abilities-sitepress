@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.3.2
+Stable tag: 0.3.22
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,9 @@ This plugin exposes core WPML translation workflows through MCP:
 
 * `wpml/list-page-translation-status`
 * `wpml/ensure-page-translation`
+* `wpml/ensure-post-translation`
+* `wpml/update-translated-post-url`
+* `wpml/audit-elementor-language-assets`
 * `wpml/detect-untranslated-content`
 * `wpml/list-active-languages`
 * `wpml/get-element-language-details`
@@ -44,6 +47,55 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.22 =
+
+* Added Elementor gallery media audit/repair abilities and batch media-caption updates for translated content.
+* Added Yoast redirect removal and expanded translation integrity checks for migrated multilingual pages.
+
+= 0.3.15 =
+
+* Added configured option translations for language-aware option output such as `blogdescription`.
+* Extended `wpml/audit-translation-integrity` to report `[insert page='...']` shortcodes that still point at source-language content.
+
+= 0.3.14 =
+
+* Added `wpml/audit-translation-integrity` for untranslated source text, source-language URL segments, and optional frontend marker checks.
+* Expanded `wpml/detect-untranslated-content` to support posts and other post types, not only pages.
+
+= 0.3.13 =
+* Added `wpml/audit-elementor-language-assets` to detect and optionally fix translated Elementor content that still references source-language global widget templates or wrong Trustpilot locales.
+
+= 0.3.12 =
+* Extended `wpml/update-translated-post-url` to update Permalink Manager custom URIs so old source-language custom URLs no longer override translated slugs.
+
+= 0.3.11 =
+* Added `wpml/update-translated-post-url` to update translated post slugs, translated categories, and Yoast/Rank Math primary category in the correct WPML language context.
+
+= 0.3.10 =
+* Added `wpml/ensure-post-translation` to create proper WPML-linked translations for pages, posts, and custom post types while copying Elementor data, featured images, selected meta, and translated taxonomy terms where available.
+
+= 0.3.9 =
+* Added `wpml/audit-translation-coverage` to report published source-language pages, posts, and templates that are missing or older than target-language translations.
+
+= 0.3.8 =
+* Tightened URL extraction for translated-link audit so unresolved checks do not treat closing tags, shortcode fragments, or prose with slashes as URLs.
+
+= 0.3.7 =
+* Extended translated-link audit to flag unresolved internal page-like URLs that are not under the target language prefix, so broken/source-language-looking links are visible even when `url_to_postid()` cannot map them to a translated post.
+
+= 0.3.6 =
+* Added `wpml/audit-translated-links-batch` to scan explicit IDs or all translated posts of a post type for source-language internal links, with optional batch replacement.
+
+= 0.3.5 =
+* Tightened translated-link audit so URLs already using the target language path prefix, such as `/en/...`, are not flagged as source-language links.
+
+= 0.3.4 =
+* Added `wpml/audit-translated-links` to detect internal links in translated content/Elementor data that still point to source-language originals, with optional `fix=true` replacement to translated URLs.
+
+= 0.3.3 =
+* Added `wpml/link-post-translation` for linking existing post/CPT items, including Elementor library templates, as WPML translations.
+* Made element language detail lookup post-type-aware instead of page-only.
 
 = 0.3.2 =
 * Fixed: removed tracked hidden files from the release package so WP.org Plugin Check passes

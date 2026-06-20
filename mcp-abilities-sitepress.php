@@ -3,10 +3,11 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.22
+ * Version: 0.3.24
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
+ * Text Domain: mcp-abilities-sitepress
  */
 
 declare(strict_types=1);
@@ -120,6 +121,110 @@ function mcp_wpml_get_active_languages(bool $skip_missing = false): array {
 
 	return is_array($languages) ? $languages : array();
 }
+
+function mcp_wpml_shortcode_positive_int($value): int {
+	if (is_int($value)) {
+		return max(0, $value);
+	}
+
+	if (is_string($value) && preg_match('/^\d+$/', $value)) {
+		return max(0, (int) $value);
+	}
+
+	return 0;
+}
+
+function mcp_wpml_language_flag_shortcode($atts = array()): string {
+	$atts = shortcode_atts(
+		array(
+			'target_lang' => '',
+			'width'       => '',
+			'height'      => '',
+			'class'       => '',
+		),
+		is_array($atts) ? $atts : array(),
+		'mcp_wpml_language_flag'
+	);
+
+	$languages = mcp_wpml_get_active_languages(false);
+	if (empty($languages)) {
+		return '';
+	}
+
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+	$current = apply_filters('wpml_current_language', null);
+	$current = is_string($current) ? $current : '';
+	$target_code = sanitize_key((string) $atts['target_lang']);
+	$target = array();
+
+	if ('' !== $target_code && isset($languages[$target_code]) && is_array($languages[$target_code])) {
+		$target = $languages[$target_code];
+	}
+
+	if (empty($target)) {
+		foreach ($languages as $code => $language) {
+			if (!is_array($language)) {
+				continue;
+			}
+
+			$code = is_string($code) ? $code : (string) ($language['language_code'] ?? '');
+			$is_current = ('' !== $current && $code === $current) || !empty($language['active']);
+			if (!$is_current) {
+				$target = $language;
+				break;
+			}
+		}
+	}
+
+	if (empty($target)) {
+		return '';
+	}
+
+	$url = isset($target['url']) ? (string) $target['url'] : '';
+	$flag_url = isset($target['country_flag_url']) ? (string) $target['country_flag_url'] : '';
+	if ('' === $url || '' === $flag_url) {
+		return '';
+	}
+
+	$label = (string) ($target['native_name'] ?? $target['translated_name'] ?? $target['language_code'] ?? '');
+	$label = '' !== $label ? $label : __('Change language', 'mcp-abilities-sitepress');
+	$width = mcp_wpml_shortcode_positive_int($atts['width']);
+	$height = mcp_wpml_shortcode_positive_int($atts['height']);
+	$class = sanitize_html_class((string) $atts['class']);
+
+	$img_attrs = array(
+		'src' => esc_url($flag_url),
+		'alt' => esc_attr($label),
+	);
+	if ($width > 0) {
+		$img_attrs['width'] = (string) $width;
+	}
+	if ($height > 0) {
+		$img_attrs['height'] = (string) $height;
+	}
+
+	$img = '<img';
+	foreach ($img_attrs as $name => $value) {
+		$img .= ' ' . $name . '="' . $value . '"';
+	}
+	$img .= '>';
+
+	$link_class = '' !== $class ? ' class="' . esc_attr($class) . '"' : '';
+
+	return sprintf(
+		'<a%s href="%s" aria-label="%s">%s</a>',
+		$link_class,
+		esc_url($url),
+		esc_attr($label),
+		$img
+	);
+}
+
+function mcp_wpml_register_frontend_shortcodes(): void {
+	add_shortcode('mcp_wpml_language_flag', 'mcp_wpml_language_flag_shortcode');
+}
+
+add_action('init', 'mcp_wpml_register_frontend_shortcodes');
 
 function mcp_wpml_language_switcher_option(): array {
 	$value = get_option('wpml_language_switcher', array());
@@ -2485,6 +2590,7 @@ function mcp_wpml_register_abilities(): void {
 			if ('' !== $slug) {
 				$after_update = get_post($post_id);
 				if ($after_update && (string) $after_update->post_name !== $slug) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Fallback for preserving an explicit translated slug when core filters override wp_update_post().
 					$wpdb->update(
 						$wpdb->posts,
 						array('post_name' => $slug),
@@ -3865,6 +3971,7 @@ function mcp_wpml_register_abilities(): void {
 							'fields'         => 'ids',
 							'orderby'        => 'ID',
 							'order'          => 'ASC',
+							// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- This audit intentionally targets published posts that have Elementor data.
 							'meta_query'     => array(
 								array(
 									'key'     => '_elementor_data',

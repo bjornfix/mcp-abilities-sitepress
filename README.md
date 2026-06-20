@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.22
+**Stable tag:** 0.3.24
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,8 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 WPML translation mapping and translation-shell helper abilities for MCP.
 
 This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capable agent a focused, authenticated way to work with SitePress work inside WordPress through MCP.
+
+It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 **Example:** "Handle this WordPress maintenance task directly." - The agent can inspect the site, call the relevant ability, and return the result without making the human click through wp-admin for every step.
 
@@ -185,6 +187,14 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 ```
 
 ## Changelog
+
+### 0.3.24
+
+- Cleared Plugin Check warnings for the public language-flag shortcode release.
+
+### 0.3.23
+
+- Added a public WPML-powered language flag shortcode for theme/header inserts.
 
 ### 0.3.22
 

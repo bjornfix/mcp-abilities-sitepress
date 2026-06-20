@@ -2,8 +2,8 @@
 Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
-Tested up to: 6.9
-Stable tag: 0.3.22
+Tested up to: 7.0
+Stable tag: 0.3.24
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -35,7 +35,7 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 = Compatibility =
 
 * Requires WordPress 6.9 or newer
-* Tested up to WordPress 6.9
+* Tested up to WordPress 7.0
 * Requires PHP 8.0 or newer
 * Intended for sites running WPML SitePress within that same WordPress release line
 
@@ -47,6 +47,14 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.24 =
+
+* Cleared Plugin Check warnings for the public language-flag shortcode release.
+
+= 0.3.23 =
+
+* Added a public WPML-powered language flag shortcode for theme/header inserts.
 
 = 0.3.22 =
 

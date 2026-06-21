@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 0.3.24
+Stable tag: 0.3.25
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -22,6 +22,7 @@ This plugin exposes core WPML translation workflows through MCP:
 * `wpml/detect-untranslated-content`
 * `wpml/list-active-languages`
 * `wpml/get-element-language-details`
+* `wpml/set-post-language-details`
 * `wpml/get-language-switcher-settings`
 * `wpml/list-language-switcher-slots`
 * `wpml/validate-language-switcher-settings`
@@ -47,6 +48,10 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.25 =
+
+* Added a guarded ability for registering WPML language details on existing post/CPT items that have no language metadata yet.
 
 = 0.3.24 =
 

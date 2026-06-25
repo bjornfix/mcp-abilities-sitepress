@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.30
+ * Version: 0.3.31
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -121,14 +121,27 @@ function mcp_wpml_elementor_translation_sibling_post_ids(array $sibling_ids, int
 }
 
 function mcp_wpml_register_elementor_translation_sibling_filter(): void {
+	static $registered = false;
+
+	if ($registered) {
+		return;
+	}
+
 	if (!function_exists('mcp_abilities_elementor_translation_sibling_filter_name')) {
 		return;
 	}
 
-	add_filter(mcp_abilities_elementor_translation_sibling_filter_name(), 'mcp_wpml_elementor_translation_sibling_post_ids', 10, 3);
+	$filter_name = mcp_abilities_elementor_translation_sibling_filter_name();
+	if (!has_filter($filter_name, 'mcp_wpml_elementor_translation_sibling_post_ids')) {
+		add_filter($filter_name, 'mcp_wpml_elementor_translation_sibling_post_ids', 10, 3);
+	}
+
+	$registered = true;
 }
 
-add_action('plugins_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 20);
+add_action('plugins_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 99);
+add_action('init', 'mcp_wpml_register_elementor_translation_sibling_filter', 1);
+add_action('wp_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 1);
 
 function mcp_wpml_with_language(string $language_code, callable $callback) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.

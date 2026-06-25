@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.25
+**Stable tag:** 0.3.27
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,15 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 ## Changelog
+
+### 0.3.27
+
+- Added `wpml/find-translation-candidates` to find reusable target-language publish/draft/trash candidates before creating duplicate translations.
+
+### 0.3.26
+
+- Added `wpml/get-post-translations` for read-only WPML translation-group lookup across posts, pages, and custom post types.
+- Started the architecture split by moving read-only language and translation query abilities into a dedicated module.
 
 ### 0.3.25
 
@@ -115,7 +124,7 @@ If you are new to the stack, use this order:
 
 If you skip base-stack verification and start with add-ons immediately, troubleshooting gets harder than it needs to be.
 
-## Abilities (13)
+## Abilities (25)
 
 | Ability | Description |
 |---------|-------------|
@@ -127,11 +136,23 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `wpml/detect-untranslated-content` | Detect copied/untranslated source-language fragments in target content |
 | `wpml/list-active-languages` | List active WPML languages with normalized metadata |
 | `wpml/get-element-language-details` | Read normalized WPML language details for a page/post element |
+| `wpml/get-post-translations` | Read the WPML translation group for a post/page/CPT |
+| `wpml/find-translation-candidates` | Find reusable target-language translation candidates before creating duplicates |
+| `wpml/set-post-language-details` | Register WPML language details for an existing post/CPT item |
+| `wpml/link-post-translation` | Link an existing post/CPT item as a WPML translation |
+| `wpml/audit-translated-links` | Audit or fix translated content links that still point to source-language originals |
+| `wpml/audit-translated-links-batch` | Batch-audit translated links across translated posts |
+| `wpml/audit-translation-coverage` | Report missing or stale target-language translations |
 | `wpml/get-language-switcher-settings` | Read normalized WPML language-switcher settings and overview |
 | `wpml/list-language-switcher-slots` | Inspect language-switcher slots across statics, menus, and sidebars |
 | `wpml/validate-language-switcher-settings` | Validate WPML language-switcher option structure before changes |
 | `wpml/reset-language-switcher-settings` | Delete switcher settings so WPML can rebuild them |
 | `wpml/rebuild-language-switcher-settings` | Reset and re-read switcher settings through a recovery path |
+| `wpml/audit-translation-integrity` | Audit translated content for source text and source URL segments |
+| `wpml/remove-yoast-redirect` | Remove an exact Yoast Premium redirect |
+| `wpml/repair-elementor-gallery-media` | Repair translated Elementor gallery media metadata/files |
+| `wpml/audit-elementor-gallery-media` | Audit translated Elementor galleries and media captions |
+| `wpml/update-media-captions-batch` | Batch update translated media captions |
 
 ## Usage Examples
 

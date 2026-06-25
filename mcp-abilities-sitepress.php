@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.25
+ * Version: 0.3.27
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -15,6 +15,8 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) {
 	exit;
 }
+
+require_once __DIR__ . '/includes/translation-query-abilities.php';
 
 function mcp_wpml_ready(): bool {
 	return function_exists('wp_register_ability') && defined('ICL_SITEPRESS_VERSION');
@@ -1159,151 +1161,7 @@ function mcp_wpml_register_abilities(): void {
 		return;
 	}
 
-	$list_active_languages = function ($input = array()): array {
-		$input = is_array($input) ? $input : array();
-		$skip_missing = !empty($input['skip_missing']);
-		$languages = mcp_wpml_get_active_languages($skip_missing);
-		$rows = array();
-
-		foreach ($languages as $code => $language) {
-			if (!is_array($language)) {
-				continue;
-			}
-
-			$rows[] = array(
-				'code'                => (string) ($language['code'] ?? $code),
-				'native_name'         => (string) ($language['native_name'] ?? ''),
-				'translated_name'     => (string) ($language['translated_name'] ?? ''),
-				'default_locale'      => (string) ($language['default_locale'] ?? ''),
-				'language_code'       => (string) ($language['language_code'] ?? ''),
-				'default'             => !empty($language['default_locale']) && ((string) ($language['code'] ?? $code) === mcp_wpml_default_lang()),
-				'active'              => !empty($language['active']),
-				'missing'             => !empty($language['missing']),
-				'country_flag_url'    => (string) ($language['country_flag_url'] ?? ''),
-				'url'                 => (string) ($language['url'] ?? ''),
-			);
-		}
-
-		return array(
-			'success'      => true,
-			'skip_missing' => $skip_missing,
-			'default_lang' => mcp_wpml_default_lang(),
-			'languages'    => $rows,
-			'total'        => count($rows),
-		);
-	};
-
-	wp_register_ability(
-		'wpml/list-active-languages',
-		array(
-			'label' => 'List Active Languages',
-			'description' => 'Lists active WPML languages with normalized metadata for safe automation.',
-			'category' => 'site',
-			'input_schema' => array(
-				'type' => 'object',
-				'properties' => array(
-					'skip_missing' => array('type' => 'boolean', 'default' => false),
-				),
-				'additionalProperties' => false,
-			),
-			'output_schema' => array(
-				'type' => 'object',
-				'properties' => array(
-					'success' => array('type' => 'boolean'),
-					'skip_missing' => array('type' => 'boolean'),
-					'default_lang' => array('type' => 'string'),
-					'languages' => array('type' => 'array'),
-					'total' => array('type' => 'integer'),
-				),
-			),
-			'execute_callback' => $list_active_languages,
-			'permission_callback' => function (): bool {
-				return current_user_can('edit_pages');
-			},
-			'meta' => array(
-				'annotations' => array(
-					'readonly' => true,
-					'destructive' => false,
-					'idempotent' => true,
-				),
-			),
-		)
-	);
-
-	$get_element_language_details = function ($input = array()): array {
-		$input = is_array($input) ? $input : array();
-		$id = isset($input['id']) ? (int) $input['id'] : 0;
-
-		if ($id <= 0) {
-			return array('success' => false, 'message' => 'id is required.');
-		}
-
-		$post = get_post($id);
-		if (!$post) {
-			return array('success' => false, 'message' => 'Element not found.');
-		}
-
-		$element_type = mcp_wpml_element_type_for_post_type((string) $post->post_type);
-		$details = mcp_wpml_lang_details($id, (string) $post->post_type);
-		if (!$details) {
-			return array('success' => false, 'message' => 'Could not resolve WPML language details.');
-		}
-
-		return array(
-			'success' => true,
-			'id' => $id,
-			'post_type' => (string) $post->post_type,
-			'element_type' => $element_type,
-			'post_status' => (string) $post->post_status,
-			'title' => (string) get_the_title($id),
-			'trid' => isset($details->trid) ? (int) $details->trid : 0,
-			'language_code' => (string) ($details->language_code ?? ''),
-			'source_language_code' => (string) ($details->source_language_code ?? ''),
-		);
-	};
-
-	wp_register_ability(
-		'wpml/get-element-language-details',
-		array(
-			'label' => 'Get Element Language Details',
-			'description' => 'Returns normalized WPML language details for a page/post element.',
-			'category' => 'site',
-			'input_schema' => array(
-				'type' => 'object',
-				'required' => array('id'),
-				'properties' => array(
-					'id' => array('type' => 'integer'),
-				),
-				'additionalProperties' => false,
-			),
-			'output_schema' => array(
-				'type' => 'object',
-				'properties' => array(
-					'success' => array('type' => 'boolean'),
-					'id' => array('type' => 'integer'),
-					'post_type' => array('type' => 'string'),
-					'element_type' => array('type' => 'string'),
-					'post_status' => array('type' => 'string'),
-					'title' => array('type' => 'string'),
-					'trid' => array('type' => 'integer'),
-					'language_code' => array('type' => 'string'),
-					'source_language_code' => array('type' => 'string'),
-					'message' => array('type' => 'string'),
-				),
-			),
-			'execute_callback' => $get_element_language_details,
-			'permission_callback' => function (): bool {
-				return current_user_can('edit_pages');
-			},
-			'meta' => array(
-				'annotations' => array(
-					'readonly' => true,
-					'destructive' => false,
-					'idempotent' => true,
-				),
-			),
-		)
-	);
+	mcp_wpml_register_translation_query_abilities();
 
 	$set_post_language_details = function ($input = array()): array {
 		$input       = is_array($input) ? $input : array();

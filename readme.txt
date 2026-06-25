@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 0.3.25
+Stable tag: 0.3.27
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -22,12 +22,23 @@ This plugin exposes core WPML translation workflows through MCP:
 * `wpml/detect-untranslated-content`
 * `wpml/list-active-languages`
 * `wpml/get-element-language-details`
+* `wpml/get-post-translations`
+* `wpml/find-translation-candidates`
 * `wpml/set-post-language-details`
+* `wpml/link-post-translation`
+* `wpml/audit-translated-links`
+* `wpml/audit-translated-links-batch`
+* `wpml/audit-translation-coverage`
 * `wpml/get-language-switcher-settings`
 * `wpml/list-language-switcher-slots`
 * `wpml/validate-language-switcher-settings`
 * `wpml/reset-language-switcher-settings`
 * `wpml/rebuild-language-switcher-settings`
+* `wpml/audit-translation-integrity`
+* `wpml/remove-yoast-redirect`
+* `wpml/repair-elementor-gallery-media`
+* `wpml/audit-elementor-gallery-media`
+* `wpml/update-media-captions-batch`
 
 Use it to inspect translation mappings, create missing translation shells, run untranslated-content checks, and safely inspect/recover WPML language-switcher state.
 
@@ -48,6 +59,15 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.27 =
+
+* Added `wpml/find-translation-candidates` to find reusable target-language publish/draft/trash candidates before creating duplicate translations.
+
+= 0.3.26 =
+
+* Added `wpml/get-post-translations` for read-only WPML translation-group lookup across posts, pages, and custom post types.
+* Started the architecture split by moving read-only language and translation query abilities into a dedicated module.
 
 = 0.3.25 =
 

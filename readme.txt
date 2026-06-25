@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 0.3.28
+Stable tag: 0.3.29
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -59,6 +59,10 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.29 =
+
+* Continued the architecture split by moving translation mutation, link audits, language-switcher recovery, translation shell/integrity checks, and Elementor gallery media abilities into dedicated modules.
 
 = 0.3.28 =
 

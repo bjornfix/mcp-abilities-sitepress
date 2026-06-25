@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.29
+ * Version: 0.3.30
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -84,6 +84,51 @@ function mcp_wpml_lang_details(int $post_id, string $post_type = '') {
 	);
 	return is_object($details) ? $details : null;
 }
+
+function mcp_wpml_elementor_translation_sibling_post_ids(array $sibling_ids, int $post_id, WP_Post $post): array {
+	if (!defined('ICL_SITEPRESS_VERSION')) {
+		return $sibling_ids;
+	}
+
+	$element_type = mcp_wpml_element_type_for_post_type((string) $post->post_type);
+	$details = mcp_wpml_lang_details($post_id, (string) $post->post_type);
+	if (!$details || empty($details->trid)) {
+		return $sibling_ids;
+	}
+
+	$wpml_translations_hook = 'wpml_get_element_translations';
+	$translations = call_user_func_array('apply_filters', array($wpml_translations_hook, null, $details->trid, $element_type));
+	if (!is_array($translations)) {
+		return $sibling_ids;
+	}
+
+	foreach ($translations as $translation) {
+		if (is_object($translation) && !empty($translation->element_id)) {
+			$sibling_ids[] = (int) $translation->element_id;
+		}
+	}
+
+	return array_values(
+		array_unique(
+			array_filter(
+				array_map('intval', $sibling_ids),
+				static function (int $sibling_id) use ($post_id): bool {
+					return $sibling_id > 0 && $sibling_id !== $post_id;
+				}
+			)
+		)
+	);
+}
+
+function mcp_wpml_register_elementor_translation_sibling_filter(): void {
+	if (!function_exists('mcp_abilities_elementor_translation_sibling_filter_name')) {
+		return;
+	}
+
+	add_filter(mcp_abilities_elementor_translation_sibling_filter_name(), 'mcp_wpml_elementor_translation_sibling_post_ids', 10, 3);
+}
+
+add_action('plugins_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 20);
 
 function mcp_wpml_with_language(string $language_code, callable $callback) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.

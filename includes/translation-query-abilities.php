@@ -346,6 +346,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		$source_details = mcp_wpml_lang_details($source_id, (string) $source->post_type);
 		$source_trid = $source_details && !empty($source_details->trid) ? (int) $source_details->trid : 0;
 		$existing_target_id = mcp_wpml_target_id_for_post_type($source_id, (string) $source->post_type, $target_lang);
+		$candidate_ids = $existing_target_id > 0 ? array($existing_target_id) : array();
 		$query_args = array(
 			'post_type' => $post_type,
 			'post_status' => $statuses,
@@ -358,11 +359,11 @@ function mcp_wpml_register_translation_query_abilities(): void {
 			$query_args['s'] = $search;
 		}
 
-		$candidate_ids = mcp_wpml_with_language($target_lang, static function () use ($query_args): array {
+		$search_candidate_ids = mcp_wpml_with_language($target_lang, static function () use ($query_args): array {
 			$ids = get_posts($query_args);
 			return is_array($ids) ? $ids : array();
 		});
-		$candidate_ids = array_map('intval', is_array($candidate_ids) ? $candidate_ids : array());
+		$candidate_ids = array_values(array_unique(array_merge($candidate_ids, array_map('intval', is_array($search_candidate_ids) ? $search_candidate_ids : array()))));
 
 		if ('' !== $source_slug) {
 			$slug_matches = mcp_wpml_with_language($target_lang, static function () use ($post_type, $statuses, $source_slug): array {

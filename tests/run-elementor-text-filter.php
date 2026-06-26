@@ -71,6 +71,23 @@ if (!empty($shared_terms)) {
 
 echo "Shared neutral term filter test passed\n";
 
+$product_terms = mcp_wpml_shared_term_hits(
+	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE',
+	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE in office walls',
+	mcp_wpml_default_ignore_terms(),
+	5,
+	2,
+	2,
+	20
+);
+
+if (!empty($product_terms)) {
+	fwrite(STDERR, "Shared product/technology terms leaked into shared-term detection\n");
+	exit(1);
+}
+
+echo "Shared product term filter test passed\n";
+
 $integrity_file = file_get_contents(dirname(__DIR__) . '/includes/translation-integrity-abilities.php');
 if (false === $integrity_file) {
 	fwrite(STDERR, "Could not read translation integrity ability file\n");

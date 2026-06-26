@@ -70,3 +70,15 @@ if (!empty($shared_terms)) {
 }
 
 echo "Shared neutral term filter test passed\n";
+
+$integrity_file = file_get_contents(dirname(__DIR__) . '/includes/translation-integrity-abilities.php');
+if (false === $integrity_file) {
+	fwrite(STDERR, "Could not read translation integrity ability file\n");
+	exit(1);
+}
+if (str_contains($integrity_file, "'data-locale=\"nb-NO\"'") || str_contains($integrity_file, "'no.trustpilot.com'")) {
+	fwrite(STDERR, "Global Trustpilot locale markers must not be default frontend source-language markers\n");
+	exit(1);
+}
+
+echo "Frontend marker defaults test passed\n";

@@ -40,8 +40,6 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 				'Hos oss får du',
 				'Klar for din drømmegarderobe',
 				'uncategorized-no',
-				'data-locale="nb-NO"',
-				'no.trustpilot.com',
 			);
 		}
 

@@ -314,6 +314,178 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		)
 	);
 
+	$list_posts = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$target_lang = isset($input['target_lang']) ? sanitize_key((string) $input['target_lang']) : '';
+		$post_type = isset($input['post_type']) && '' !== (string) $input['post_type'] ? sanitize_key((string) $input['post_type']) : 'post';
+		$per_page = isset($input['per_page']) ? max(1, min(100, (int) $input['per_page'])) : 10;
+		$page = isset($input['page']) ? max(1, (int) $input['page']) : 1;
+		$include_totals = !empty($input['include_totals']);
+		$statuses = isset($input['statuses']) && is_array($input['statuses'])
+			? array_values(array_filter(array_map('sanitize_key', $input['statuses'])))
+			: array(sanitize_key((string) ($input['status'] ?? 'publish')));
+		$orderby = isset($input['orderby']) ? sanitize_key((string) $input['orderby']) : 'date';
+		$order = isset($input['order']) && 'ASC' === strtoupper((string) $input['order']) ? 'ASC' : 'DESC';
+		$search = isset($input['search']) ? sanitize_text_field((string) $input['search']) : '';
+		$category_id = isset($input['category_id']) ? (int) $input['category_id'] : 0;
+		$author_id = isset($input['author_id']) ? (int) $input['author_id'] : 0;
+
+		if ('' === $target_lang) {
+			return array('success' => false, 'message' => 'target_lang is required.');
+		}
+		if (!post_type_exists($post_type)) {
+			return array('success' => false, 'message' => 'Invalid post_type.');
+		}
+		if (empty($statuses) || in_array('any', $statuses, true)) {
+			$statuses = array('publish', 'draft', 'pending', 'private', 'future');
+		}
+
+		$allowed_orderby = array('date', 'modified', 'title', 'ID', 'id', 'name', 'slug', 'post_name');
+		if (!in_array($orderby, $allowed_orderby, true)) {
+			$orderby = 'date';
+		}
+		if ('id' === $orderby) {
+			$orderby = 'ID';
+		} elseif ('slug' === $orderby) {
+			$orderby = 'name';
+		}
+
+		$args = array(
+			'post_type' => $post_type,
+			'post_status' => $statuses,
+			'posts_per_page' => $per_page,
+			'paged' => $page,
+			'orderby' => $orderby,
+			'order' => $order,
+			'no_found_rows' => !$include_totals,
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+			'suppress_filters' => false,
+		);
+		if ('' !== $search) {
+			$args['s'] = $search;
+		}
+		if ($category_id > 0) {
+			$args['cat'] = $category_id;
+		}
+		if ($author_id > 0) {
+			$args['author'] = $author_id;
+		}
+
+		$result = mcp_wpml_with_language($target_lang, static function () use ($args, $include_totals, $page, $per_page): array {
+			$query = new WP_Query($args);
+			$posts = array();
+
+			foreach ($query->posts as $post) {
+				if (!$post instanceof WP_Post) {
+					continue;
+				}
+
+				$details = mcp_wpml_lang_details((int) $post->ID, (string) $post->post_type);
+				$posts[] = array(
+					'id' => (int) $post->ID,
+					'title' => (string) $post->post_title,
+					'slug' => (string) $post->post_name,
+					'status' => (string) $post->post_status,
+					'post_type' => (string) $post->post_type,
+					'date' => (string) $post->post_date,
+					'modified' => (string) $post->post_modified,
+					'excerpt' => wp_trim_words($post->post_excerpt ?: $post->post_content, 30),
+					'link' => (string) get_permalink((int) $post->ID),
+					'language_code' => $details ? (string) ($details->language_code ?? '') : '',
+					'source_language_code' => $details ? (string) ($details->source_language_code ?? '') : '',
+					'trid' => $details && !empty($details->trid) ? (int) $details->trid : 0,
+				);
+			}
+
+			$returned = count($posts);
+			$total = $include_totals ? (int) $query->found_posts : null;
+			$total_pages = $include_totals ? (int) $query->max_num_pages : null;
+			$has_more = $include_totals
+				? $page < (int) $query->max_num_pages
+				: $returned === $per_page;
+
+			return array(
+				'posts' => $posts,
+				'returned' => $returned,
+				'has_more' => $has_more,
+				'total' => $total,
+				'total_pages' => $total_pages,
+			);
+		});
+
+		if (!is_array($result)) {
+			return array('success' => false, 'message' => 'WPML post query failed.');
+		}
+
+		return array_merge(
+			array(
+				'success' => true,
+				'target_lang' => $target_lang,
+				'post_type' => $post_type,
+				'category_id' => $category_id,
+			),
+			$result
+		);
+	};
+
+	wp_register_ability(
+		'wpml/list-posts',
+		array(
+			'label' => 'List WPML Posts',
+			'description' => 'Lists posts, pages, or custom post types inside an explicit WPML language context with native WordPress query filters.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'required' => array('target_lang'),
+				'properties' => array(
+					'target_lang' => array('type' => 'string'),
+					'post_type' => array('type' => 'string', 'default' => 'post'),
+					'status' => array('type' => 'string', 'default' => 'publish'),
+					'statuses' => array(
+						'type' => 'array',
+						'items' => array('type' => 'string'),
+					),
+					'per_page' => array('type' => 'integer', 'default' => 10, 'minimum' => 1, 'maximum' => 100),
+					'page' => array('type' => 'integer', 'default' => 1, 'minimum' => 1),
+					'include_totals' => array('type' => 'boolean', 'default' => false),
+					'orderby' => array('type' => 'string', 'default' => 'date'),
+					'order' => array('type' => 'string', 'default' => 'DESC'),
+					'search' => array('type' => 'string'),
+					'category_id' => array('type' => 'integer'),
+					'author_id' => array('type' => 'integer'),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'target_lang' => array('type' => 'string'),
+					'post_type' => array('type' => 'string'),
+					'category_id' => array('type' => 'integer'),
+					'posts' => array('type' => 'array'),
+					'returned' => array('type' => 'integer'),
+					'has_more' => array('type' => 'boolean'),
+					'total' => array('type' => array('integer', 'null')),
+					'total_pages' => array('type' => array('integer', 'null')),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $list_posts,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
 	$find_translation_candidates = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
 		$source_id = isset($input['source_id']) ? (int) $input['source_id'] : 0;

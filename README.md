@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.31
+**Stable tag:** 0.3.32
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,12 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 ## Changelog
+
+### 0.3.32
+
+- Added `wpml/list-posts` for language-scoped WPML post/page/CPT queries,
+  including category, status, search, order, pagination, and translation
+  metadata in the result.
 
 ### 0.3.31
 
@@ -155,6 +161,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `wpml/audit-elementor-language-assets` | Audit/fix translated Elementor global widget template references and Trustpilot locales |
 | `wpml/detect-untranslated-content` | Detect copied/untranslated source-language fragments in target content |
 | `wpml/list-active-languages` | List active WPML languages with normalized metadata |
+| `wpml/list-posts` | List posts, pages, or custom post types in an explicit WPML language context |
 | `wpml/get-element-language-details` | Read normalized WPML language details for a page/post element |
 | `wpml/get-post-translations` | Read the WPML translation group for a post/page/CPT |
 | `wpml/find-translation-candidates` | Find reusable target-language translation candidates before creating duplicates |

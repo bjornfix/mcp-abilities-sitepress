@@ -72,8 +72,8 @@ if (!empty($shared_terms)) {
 echo "Shared neutral term filter test passed\n";
 
 $product_terms = mcp_wpml_shared_term_hits(
-	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE plexiglass lexan plexiglass lexan',
-	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE plexiglass lexan plexiglass lexan in office walls',
+	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE plexiglass lexan plexiglass lexan aluminium design',
+	'Intelligent glass PRIVA-LITE PRIVA-LITE PRIVA-LITE plexiglass lexan plexiglass lexan aluminium design in office walls',
 	mcp_wpml_default_ignore_terms(),
 	5,
 	2,

@@ -53,3 +53,20 @@ if (!str_contains($text, 'Professional expertise gives peace of mind') || !str_c
 }
 
 echo "Elementor text filter test passed\n";
+
+$shared_terms = mcp_wpml_shared_term_hits(
+	'Glass doors center center center center center',
+	'Glass doors center center center center center with glass panels',
+	mcp_wpml_default_ignore_terms(),
+	5,
+	2,
+	2,
+	20
+);
+
+if (!empty($shared_terms)) {
+	fwrite(STDERR, "Neutral layout/domain terms leaked into shared-term detection\n");
+	exit(1);
+}
+
+echo "Shared neutral term filter test passed\n";

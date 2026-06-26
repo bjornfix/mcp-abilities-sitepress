@@ -317,6 +317,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 	$list_posts = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
 		$target_lang = isset($input['target_lang']) ? sanitize_key((string) $input['target_lang']) : '';
+		if ('' === $target_lang && isset($input['lang'])) {
+			$target_lang = sanitize_key((string) $input['lang']);
+		}
 		$post_type = isset($input['post_type']) && '' !== (string) $input['post_type'] ? sanitize_key((string) $input['post_type']) : 'post';
 		$per_page = isset($input['per_page']) ? max(1, min(100, (int) $input['per_page'])) : 10;
 		$page = isset($input['page']) ? max(1, (int) $input['page']) : 1;
@@ -331,7 +334,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		$author_id = isset($input['author_id']) ? (int) $input['author_id'] : 0;
 
 		if ('' === $target_lang) {
-			return array('success' => false, 'message' => 'target_lang is required.');
+			return array('success' => false, 'message' => 'target_lang or lang is required.');
 		}
 		if (!post_type_exists($post_type)) {
 			return array('success' => false, 'message' => 'Invalid post_type.');
@@ -437,9 +440,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 			'category' => 'site',
 			'input_schema' => array(
 				'type' => 'object',
-				'required' => array('target_lang'),
 				'properties' => array(
 					'target_lang' => array('type' => 'string'),
+					'lang' => array('type' => 'string', 'description' => 'Alias for target_lang.'),
 					'post_type' => array('type' => 'string', 'default' => 'post'),
 					'status' => array('type' => 'string', 'default' => 'publish'),
 					'statuses' => array(

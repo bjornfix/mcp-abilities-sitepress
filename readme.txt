@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 0.3.32
+Stable tag: 0.3.33
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -60,6 +60,10 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.33 =
+
+* Improved: `wpml/list-posts` now accepts `lang` as an alias for `target_lang`, so search queries can use the same language parameter shape as other list/search helpers.
 
 = 0.3.32 =
 

@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.39
+**Stable tag:** 0.3.40
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,11 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 ## Changelog
+
+### 0.3.40
+
+- Added read-only WPML taxonomy term abilities for language-scoped term lists
+  and term translation-group lookup.
 
 ### 0.3.39
 
@@ -188,7 +193,7 @@ If you are new to the stack, use this order:
 
 If you skip base-stack verification and start with add-ons immediately, troubleshooting gets harder than it needs to be.
 
-## Abilities (25)
+## Abilities (27)
 
 | Ability | Description |
 |---------|-------------|
@@ -200,8 +205,10 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `wpml/detect-untranslated-content` | Detect copied/untranslated source-language fragments in target content |
 | `wpml/list-active-languages` | List active WPML languages with normalized metadata |
 | `wpml/list-posts` | List posts, pages, or custom post types in an explicit WPML language context |
+| `wpml/list-terms` | List taxonomy terms in an explicit WPML language context |
 | `wpml/get-element-language-details` | Read normalized WPML language details for a page/post element |
 | `wpml/get-post-translations` | Read the WPML translation group for a post/page/CPT |
+| `wpml/get-term-translations` | Read the WPML translation group for a taxonomy term |
 | `wpml/find-translation-candidates` | Find reusable target-language translation candidates before creating duplicates |
 | `wpml/set-post-language-details` | Register WPML language details for an existing post/CPT item |
 | `wpml/link-post-translation` | Link an existing post/CPT item as a WPML translation |

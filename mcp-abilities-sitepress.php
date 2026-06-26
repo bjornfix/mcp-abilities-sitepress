@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.39
+ * Version: 0.3.40
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -66,6 +66,12 @@ function mcp_wpml_element_type_for_post_type(string $post_type): string {
 	return is_string($element_type) && '' !== $element_type ? $element_type : 'post_' . $post_type;
 }
 
+function mcp_wpml_element_type_for_taxonomy(string $taxonomy): string {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+	$element_type = apply_filters('wpml_element_type', 'tax_' . $taxonomy);
+	return is_string($element_type) && '' !== $element_type ? $element_type : 'tax_' . $taxonomy;
+}
+
 function mcp_wpml_lang_details(int $post_id, string $post_type = '') {
 	if ('' === $post_type) {
 		$post = get_post($post_id);
@@ -83,6 +89,60 @@ function mcp_wpml_lang_details(int $post_id, string $post_type = '') {
 		)
 	);
 	return is_object($details) ? $details : null;
+}
+
+function mcp_wpml_term_taxonomy_id(int $term_id, string $taxonomy): int {
+	$term = get_term($term_id, $taxonomy);
+	if (!$term || is_wp_error($term) || empty($term->term_taxonomy_id)) {
+		return 0;
+	}
+
+	return (int) $term->term_taxonomy_id;
+}
+
+function mcp_wpml_get_term_by_term_taxonomy_id(int $term_taxonomy_id) {
+	if ($term_taxonomy_id <= 0) {
+		return null;
+	}
+
+	$terms = get_terms(
+		array(
+			'hide_empty'       => false,
+			'number'           => 1,
+			'term_taxonomy_id' => array($term_taxonomy_id),
+		)
+	);
+
+	if (is_wp_error($terms) || empty($terms) || !is_array($terms)) {
+		return null;
+	}
+
+	$term = reset($terms);
+	return $term instanceof WP_Term ? $term : null;
+}
+
+function mcp_wpml_term_lang_details(int $term_id, string $taxonomy) {
+	$term_taxonomy_id = mcp_wpml_term_taxonomy_id($term_id, $taxonomy);
+	if ($term_taxonomy_id <= 0) {
+		return null;
+	}
+
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+	$details = apply_filters(
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+		'wpml_element_language_details',
+		null,
+		array(
+			'element_id'   => $term_taxonomy_id,
+			'element_type' => mcp_wpml_element_type_for_taxonomy($taxonomy),
+		)
+	);
+	return is_object($details) ? $details : null;
+}
+
+function mcp_wpml_term_link(WP_Term $term): string {
+	$link = get_term_link($term);
+	return is_wp_error($link) ? '' : (string) $link;
 }
 
 function mcp_wpml_elementor_translation_sibling_post_ids(array $sibling_ids, int $post_id, WP_Post $post): array {

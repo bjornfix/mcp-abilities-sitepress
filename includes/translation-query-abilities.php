@@ -314,6 +314,322 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		)
 	);
 
+	$list_terms = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$target_lang = isset($input['target_lang']) ? sanitize_key((string) $input['target_lang']) : '';
+		if ('' === $target_lang && isset($input['lang'])) {
+			$target_lang = sanitize_key((string) $input['lang']);
+		}
+		$taxonomy = isset($input['taxonomy']) && '' !== (string) $input['taxonomy'] ? sanitize_key((string) $input['taxonomy']) : 'post_tag';
+		$hide_empty = array_key_exists('hide_empty', $input) ? (bool) $input['hide_empty'] : false;
+		$search = isset($input['search']) ? sanitize_text_field((string) $input['search']) : '';
+		$orderby = isset($input['orderby']) ? sanitize_key((string) $input['orderby']) : 'name';
+		$order = isset($input['order']) && 'DESC' === strtoupper((string) $input['order']) ? 'DESC' : 'ASC';
+		$number = isset($input['number']) ? max(0, min(200, (int) $input['number'])) : 100;
+		$include_translation_details = !array_key_exists('include_translation_details', $input) || (bool) $input['include_translation_details'];
+
+		if ('' === $target_lang) {
+			return array('success' => false, 'message' => 'target_lang or lang is required.');
+		}
+		if (!taxonomy_exists($taxonomy)) {
+			return array('success' => false, 'message' => 'Invalid taxonomy.', 'taxonomy' => $taxonomy);
+		}
+
+		$allowed_orderby = array('name', 'slug', 'term_id', 'count', 'none');
+		if (!in_array($orderby, $allowed_orderby, true)) {
+			$orderby = 'name';
+		}
+
+		$args = array(
+			'taxonomy' => $taxonomy,
+			'hide_empty' => $hide_empty,
+			'orderby' => $orderby,
+			'order' => $order,
+		);
+		if ('' !== $search) {
+			$args['search'] = $search;
+		}
+		if ($number > 0) {
+			$args['number'] = $number;
+		}
+
+		$result = mcp_wpml_with_language($target_lang, static function () use ($args, $taxonomy, $include_translation_details): array {
+			$terms_raw = get_terms($args);
+			if (is_wp_error($terms_raw)) {
+				return array(
+					'success' => false,
+					'message' => $terms_raw->get_error_message(),
+					'terms' => array(),
+					'total' => 0,
+				);
+			}
+
+			$terms = array();
+			foreach (is_array($terms_raw) ? $terms_raw : array() as $term) {
+				if (!$term instanceof WP_Term) {
+					continue;
+				}
+
+				$details = $include_translation_details ? mcp_wpml_term_lang_details((int) $term->term_id, $taxonomy) : null;
+				$terms[] = array(
+					'id' => (int) $term->term_id,
+					'term_id' => (int) $term->term_id,
+					'term_taxonomy_id' => (int) $term->term_taxonomy_id,
+					'taxonomy' => (string) $term->taxonomy,
+					'name' => (string) $term->name,
+					'slug' => (string) $term->slug,
+					'description' => (string) $term->description,
+					'count' => (int) $term->count,
+					'link' => mcp_wpml_term_link($term),
+					'language_code' => $details ? (string) ($details->language_code ?? '') : '',
+					'source_language_code' => $details ? (string) ($details->source_language_code ?? '') : '',
+					'trid' => $details && !empty($details->trid) ? (int) $details->trid : 0,
+				);
+			}
+
+			return array(
+				'success' => true,
+				'terms' => $terms,
+				'total' => count($terms),
+			);
+		});
+
+		if (!is_array($result)) {
+			return array('success' => false, 'message' => 'WPML term query failed.', 'taxonomy' => $taxonomy);
+		}
+
+		return array_merge(
+			array(
+				'target_lang' => $target_lang,
+				'taxonomy' => $taxonomy,
+				'hide_empty' => $hide_empty,
+				'search' => $search,
+			),
+			$result
+		);
+	};
+
+	wp_register_ability(
+		'wpml/list-terms',
+		array(
+			'label' => 'List WPML Terms',
+			'description' => 'Lists taxonomy terms inside an explicit WPML language context with normalized term translation metadata.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'target_lang' => array('type' => 'string'),
+					'lang' => array('type' => 'string', 'description' => 'Alias for target_lang.'),
+					'taxonomy' => array('type' => 'string', 'default' => 'post_tag'),
+					'hide_empty' => array('type' => 'boolean', 'default' => false),
+					'search' => array('type' => 'string'),
+					'orderby' => array('type' => 'string', 'default' => 'name'),
+					'order' => array('type' => 'string', 'enum' => array('ASC', 'DESC'), 'default' => 'ASC'),
+					'number' => array('type' => 'integer', 'default' => 100, 'minimum' => 0, 'maximum' => 200),
+					'include_translation_details' => array('type' => 'boolean', 'default' => true),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'target_lang' => array('type' => 'string'),
+					'taxonomy' => array('type' => 'string'),
+					'hide_empty' => array('type' => 'boolean'),
+					'search' => array('type' => 'string'),
+					'terms' => array('type' => 'array'),
+					'total' => array('type' => 'integer'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $list_terms,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
+	$get_term_translations = function ($input = array()): array {
+		$input = is_array($input) ? $input : array();
+		$term_id = isset($input['term_id']) ? (int) $input['term_id'] : (isset($input['id']) ? (int) $input['id'] : 0);
+		$taxonomy = isset($input['taxonomy']) && '' !== (string) $input['taxonomy'] ? sanitize_key((string) $input['taxonomy']) : 'post_tag';
+		$include_missing = !array_key_exists('include_missing', $input) || (bool) $input['include_missing'];
+
+		if ($term_id <= 0) {
+			return array('success' => false, 'message' => 'term_id or id is required.');
+		}
+		if (!taxonomy_exists($taxonomy)) {
+			return array('success' => false, 'message' => 'Invalid taxonomy.', 'taxonomy' => $taxonomy);
+		}
+
+		$term = get_term($term_id, $taxonomy);
+		if (!$term || is_wp_error($term)) {
+			return array('success' => false, 'message' => 'Term not found.', 'taxonomy' => $taxonomy);
+		}
+
+		$term_taxonomy_id = (int) $term->term_taxonomy_id;
+		$element_type = mcp_wpml_element_type_for_taxonomy($taxonomy);
+		$details = mcp_wpml_term_lang_details($term_id, $taxonomy);
+		if (!$details || empty($details->trid)) {
+			return array(
+				'success' => false,
+				'id' => $term_id,
+				'term_id' => $term_id,
+				'term_taxonomy_id' => $term_taxonomy_id,
+				'taxonomy' => $taxonomy,
+				'element_type' => $element_type,
+				'message' => 'Could not resolve WPML term translation group.',
+			);
+		}
+
+		$trid = (int) $details->trid;
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+		$translations_raw = apply_filters(
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+			'wpml_get_element_translations',
+			null,
+			$trid,
+			$element_type
+		);
+		$translations_raw = is_array($translations_raw) ? $translations_raw : array();
+		$translations = array();
+		$by_language = array();
+
+		foreach ($translations_raw as $language_code => $translation) {
+			$translation = is_object($translation) ? $translation : (object) (is_array($translation) ? $translation : array());
+			$translation_term_taxonomy_id = isset($translation->element_id) ? (int) $translation->element_id : 0;
+			$translation_term = $translation_term_taxonomy_id > 0 ? mcp_wpml_get_term_by_term_taxonomy_id($translation_term_taxonomy_id) : null;
+			$language_code = isset($translation->language_code) && '' !== (string) $translation->language_code
+				? (string) $translation->language_code
+				: (string) $language_code;
+			$translation_term_id = $translation_term instanceof WP_Term ? (int) $translation_term->term_id : 0;
+			$row = array(
+				'language_code' => $language_code,
+				'id' => $translation_term_id,
+				'term_id' => $translation_term_id,
+				'term_taxonomy_id' => $translation_term_taxonomy_id,
+				'taxonomy' => $translation_term instanceof WP_Term ? (string) $translation_term->taxonomy : '',
+				'name' => $translation_term instanceof WP_Term ? (string) $translation_term->name : '',
+				'slug' => $translation_term instanceof WP_Term ? (string) $translation_term->slug : '',
+				'description' => $translation_term instanceof WP_Term ? (string) $translation_term->description : '',
+				'count' => $translation_term instanceof WP_Term ? (int) $translation_term->count : 0,
+				'link' => $translation_term instanceof WP_Term ? mcp_wpml_term_link($translation_term) : '',
+				'trid' => $trid,
+				'source_language_code' => isset($translation->source_language_code) ? (string) $translation->source_language_code : '',
+				'is_original' => !empty($translation->original),
+				'is_requested' => $translation_term_taxonomy_id === $term_taxonomy_id,
+				'has_translation' => $translation_term_id > 0,
+			);
+			$translations[] = $row;
+			if ('' !== $language_code) {
+				$by_language[$language_code] = $row;
+			}
+		}
+
+		if ($include_missing) {
+			foreach (mcp_wpml_get_active_languages(false) as $language_code => $language) {
+				if (!is_array($language)) {
+					continue;
+				}
+				$language_code = (string) ($language['code'] ?? $language['language_code'] ?? $language_code);
+				if ('' === $language_code || isset($by_language[$language_code])) {
+					continue;
+				}
+
+				$row = array(
+					'language_code' => $language_code,
+					'id' => 0,
+					'term_id' => 0,
+					'term_taxonomy_id' => 0,
+					'taxonomy' => $taxonomy,
+					'name' => '',
+					'slug' => '',
+					'description' => '',
+					'count' => 0,
+					'link' => '',
+					'trid' => $trid,
+					'source_language_code' => '',
+					'is_original' => false,
+					'is_requested' => false,
+					'has_translation' => false,
+				);
+				$translations[] = $row;
+				$by_language[$language_code] = $row;
+			}
+		}
+
+		return array(
+			'success' => true,
+			'id' => $term_id,
+			'term_id' => $term_id,
+			'term_taxonomy_id' => $term_taxonomy_id,
+			'taxonomy' => $taxonomy,
+			'element_type' => $element_type,
+			'trid' => $trid,
+			'language_code' => (string) ($details->language_code ?? ''),
+			'source_language_code' => (string) ($details->source_language_code ?? ''),
+			'translations' => $translations,
+			'by_language' => $by_language,
+			'total' => count($translations),
+		);
+	};
+
+	wp_register_ability(
+		'wpml/get-term-translations',
+		array(
+			'label' => 'Get Term Translations',
+			'description' => 'Returns the WPML translation group for a taxonomy term, including translated term IDs, languages, slugs, and links.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'id' => array('type' => 'integer', 'description' => 'Alias for term_id.'),
+					'term_id' => array('type' => 'integer'),
+					'taxonomy' => array('type' => 'string', 'default' => 'post_tag'),
+					'include_missing' => array('type' => 'boolean', 'default' => true),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'id' => array('type' => 'integer'),
+					'term_id' => array('type' => 'integer'),
+					'term_taxonomy_id' => array('type' => 'integer'),
+					'taxonomy' => array('type' => 'string'),
+					'element_type' => array('type' => 'string'),
+					'trid' => array('type' => 'integer'),
+					'language_code' => array('type' => 'string'),
+					'source_language_code' => array('type' => 'string'),
+					'translations' => array('type' => 'array'),
+					'by_language' => array('type' => 'object'),
+					'total' => array('type' => 'integer'),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $get_term_translations,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => true,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
 	$list_posts = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
 		$target_lang = isset($input['target_lang']) ? sanitize_key((string) $input['target_lang']) : '';

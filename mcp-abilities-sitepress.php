@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.33
+ * Version: 0.3.34
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -901,6 +901,7 @@ function mcp_wpml_default_ignore_terms(): array {
 
 function mcp_wpml_elementor_excluded_keys(): array {
 	return array(
+		'__globals__' => true,
 		'_id' => true,
 		'id' => true,
 		'eltype' => true,
@@ -919,7 +920,12 @@ function mcp_wpml_elementor_excluded_keys(): array {
 		'selected_icon' => true,
 		'background_background' => true,
 		'background_color' => true,
+		'button_background_color' => true,
+		'button_text_color' => true,
+		'link_color' => true,
+		'title_color' => true,
 		'text_color' => true,
+		'typography_typography' => true,
 		'global_colors' => true,
 		'custom_css' => true,
 		'margin' => true,
@@ -977,6 +983,10 @@ function mcp_wpml_collect_elementor_text_values($node, array &$parts, int $depth
 	$iterable = is_object($node) ? get_object_vars($node) : $node;
 
 	foreach ($iterable as $key => $value) {
+		$key_l = is_string($key) ? (function_exists('mb_strtolower') ? mb_strtolower($key, 'UTF-8') : strtolower($key)) : '';
+		if ('' !== $key_l && isset($excluded[$key_l])) {
+			continue;
+		}
 		if (is_array($value) || is_object($value)) {
 			mcp_wpml_collect_elementor_text_values($value, $parts, $depth + 1);
 			continue;
@@ -985,10 +995,6 @@ function mcp_wpml_collect_elementor_text_values($node, array &$parts, int $depth
 			continue;
 		}
 
-		$key_l = is_string($key) ? (function_exists('mb_strtolower') ? mb_strtolower($key, 'UTF-8') : strtolower($key)) : '';
-		if ('' !== $key_l && isset($excluded[$key_l])) {
-			continue;
-		}
 		if (!mcp_wpml_string_seems_human_text($value)) {
 			continue;
 		}

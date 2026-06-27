@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.40
+ * Version: 0.3.41
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -202,6 +202,67 @@ function mcp_wpml_register_elementor_translation_sibling_filter(): void {
 add_action('plugins_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 99);
 add_action('init', 'mcp_wpml_register_elementor_translation_sibling_filter', 1);
 add_action('wp_loaded', 'mcp_wpml_register_elementor_translation_sibling_filter', 1);
+
+function mcp_wpml_render_translated_contact_form_7_shortcode($return, string $tag, $attr) {
+	if ('contact-form-7' !== $tag || !defined('ICL_SITEPRESS_VERSION') || !function_exists('wpcf7_contact_form')) {
+		return $return;
+	}
+
+	if (!is_array($attr)) {
+		return $return;
+	}
+
+	$form_id = 0;
+	if (isset($attr['id'])) {
+		$form_id = mcp_wpml_shortcode_positive_int($attr['id']);
+	} elseif (isset($attr[0])) {
+		$form_id = mcp_wpml_shortcode_positive_int($attr[0]);
+	}
+
+	if ($form_id <= 0) {
+		return $return;
+	}
+
+	$current_lang = apply_filters('wpml_current_language', null);
+	$current_lang = is_string($current_lang) ? $current_lang : '';
+	if ('' === $current_lang || $current_lang === mcp_wpml_default_lang()) {
+		return $return;
+	}
+
+	$current_details = mcp_wpml_lang_details($form_id, 'wpcf7_contact_form');
+	if ($current_details && !empty($current_details->language_code) && $current_lang === (string) $current_details->language_code) {
+		return $return;
+	}
+
+	$translated_id = mcp_wpml_target_id_for_post_type($form_id, 'wpcf7_contact_form', $current_lang);
+	if ($translated_id <= 0 || $translated_id === $form_id) {
+		return $return;
+	}
+
+	$translated = get_post($translated_id);
+	if (!$translated || 'wpcf7_contact_form' !== (string) $translated->post_type || 'publish' !== (string) $translated->post_status) {
+		return $return;
+	}
+
+	$translated_details = mcp_wpml_lang_details($translated_id, 'wpcf7_contact_form');
+	if ($translated_details && !empty($translated_details->language_code) && $current_lang !== (string) $translated_details->language_code) {
+		return $return;
+	}
+
+	$attr['id'] = (string) $translated_id;
+	if (isset($attr[0])) {
+		$attr[0] = (string) $translated_id;
+	}
+
+	global $shortcode_tags;
+	if (empty($shortcode_tags[$tag]) || !is_callable($shortcode_tags[$tag])) {
+		return $return;
+	}
+
+	return call_user_func($shortcode_tags[$tag], $attr, '', $tag);
+}
+
+add_filter('pre_do_shortcode_tag', 'mcp_wpml_render_translated_contact_form_7_shortcode', 10, 3);
 
 function mcp_wpml_with_language(string $language_code, callable $callback) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.46
+ * Version: 0.3.47
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -539,6 +539,15 @@ function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, ar
 			}
 		}
 
+		$is_background_image_equivalent = false;
+		if ($include_single_images && isset($settings['background_image']) && is_array($settings['background_image'])) {
+			$background_image_id = isset($settings['background_image']['id']) && is_numeric($settings['background_image']['id']) ? (int) $settings['background_image']['id'] : 0;
+			if ($background_image_id > 0) {
+				$attachment_ids[] = $background_image_id;
+				$is_background_image_equivalent = true;
+			}
+		}
+
 		$attachment_ids = array_values(array_unique($attachment_ids));
 		if (!empty($attachment_ids) && (str_contains($widget_type, 'gallery') || str_contains($widget_type, 'carousel') || !empty($settings['gallery']) || !empty($settings['wp_gallery']))) {
 			$galleries[] = array_merge(
@@ -559,6 +568,17 @@ function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, ar
 					'attachment_ids'          => $attachment_ids,
 					'count'                   => count($attachment_ids),
 					'single_image_equivalent' => true,
+				)
+			);
+		} elseif ($include_single_images && !empty($attachment_ids) && $is_background_image_equivalent) {
+			$galleries[] = array_merge(
+				$post_info,
+				array(
+					'element_id'                  => isset($element['id']) ? (string) $element['id'] : '',
+					'widget_type'                 => '' !== $widget_type ? $widget_type : 'container',
+					'attachment_ids'              => $attachment_ids,
+					'count'                       => count($attachment_ids),
+					'background_image_equivalent' => true,
 				)
 			);
 		}

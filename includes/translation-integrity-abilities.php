@@ -192,7 +192,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 						}
 					}
 					foreach ($target_by_id as $element_id => $target_gallery) {
-						if (!empty($target_gallery['single_image_equivalent'])) {
+						if (!empty($target_gallery['single_image_equivalent']) || !empty($target_gallery['background_image_equivalent'])) {
 							continue;
 						}
 						$caption_issues = mcp_wpml_gallery_attachment_caption_issues((array) $target_gallery['attachment_ids'], $target_lang);

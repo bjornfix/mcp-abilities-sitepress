@@ -139,3 +139,44 @@ if (null === $matched_gallery || 'img1' !== $matched_gallery['element_id']) {
 }
 
 echo "Single-image gallery equivalent test passed\n";
+
+$background_gallery_candidates = array();
+$background_container = array(
+	array(
+		'id' => 'bg1',
+		'elType' => 'container',
+		'settings' => array(
+			'background_background' => 'classic',
+			'background_image' => array('id' => 456),
+		),
+	),
+);
+mcp_wpml_collect_gallery_widgets($background_container, $background_gallery_candidates, array('post_id' => 1));
+if (!empty($background_gallery_candidates)) {
+	fwrite(STDERR, "Background images must not be treated as galleries by default\n");
+	exit(1);
+}
+
+mcp_wpml_collect_gallery_widgets($background_container, $background_gallery_candidates, array('post_id' => 1), true);
+if (1 !== count($background_gallery_candidates) || empty($background_gallery_candidates[0]['background_image_equivalent']) || array(456) !== $background_gallery_candidates[0]['attachment_ids']) {
+	fwrite(STDERR, "Background-image gallery equivalent was not collected correctly\n");
+	exit(1);
+}
+
+$matched_background_gallery_ids = array();
+$matched_background_gallery = mcp_wpml_find_matching_gallery_widget(
+	array(
+		'element_id' => 'carousel2',
+		'attachment_ids' => array(456),
+		'count' => 1,
+	),
+	array(),
+	$background_gallery_candidates,
+	$matched_background_gallery_ids
+);
+if (null === $matched_background_gallery || 'bg1' !== $matched_background_gallery['element_id']) {
+	fwrite(STDERR, "Background-image gallery equivalent did not match a one-item source gallery\n");
+	exit(1);
+}
+
+echo "Background-image gallery equivalent test passed\n";

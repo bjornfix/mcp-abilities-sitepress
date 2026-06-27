@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.44
+ * Version: 0.3.45
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1304,6 +1304,36 @@ function mcp_wpml_path_segments(string $url): array {
 	return array_values($parts);
 }
 
+function mcp_wpml_translated_ancestor_segments(int $source_id, int $target_id): array {
+	$segments = array();
+	$source_ancestors = array_reverse(get_post_ancestors($source_id));
+	$target_ancestors = array_reverse(get_post_ancestors($target_id));
+	if (empty($source_ancestors) || empty($target_ancestors)) {
+		return $segments;
+	}
+
+	$target_slugs = array();
+	foreach ($target_ancestors as $ancestor_id) {
+		$ancestor = get_post((int) $ancestor_id);
+		if ($ancestor && '' !== (string) $ancestor->post_name) {
+			$target_slugs[(string) $ancestor->post_name] = true;
+		}
+	}
+
+	foreach ($source_ancestors as $ancestor_id) {
+		$ancestor = get_post((int) $ancestor_id);
+		if (!$ancestor || '' === (string) $ancestor->post_name) {
+			continue;
+		}
+		$slug = (string) $ancestor->post_name;
+		if (isset($target_slugs[$slug])) {
+			$segments[$slug] = true;
+		}
+	}
+
+	return $segments;
+}
+
 function mcp_wpml_target_permalink_issues(int $source_id, int $target_id, string $target_lang): array {
 	$issues = array();
 	$source = get_post($source_id);
@@ -1348,9 +1378,13 @@ function mcp_wpml_target_permalink_issues(int $source_id, int $target_id, string
 	}
 
 	$target_segments = array_fill_keys(mcp_wpml_path_segments($target_url), true);
+	$translated_ancestor_segments = mcp_wpml_translated_ancestor_segments($source_id, $target_id);
 	foreach (array_keys($source_segments) as $segment) {
 		$segment = trim((string) $segment);
 		if ('' === $segment || strlen($segment) < 4 || $segment === $target_lang || is_numeric($segment)) {
+			continue;
+		}
+		if (isset($translated_ancestor_segments[$segment])) {
 			continue;
 		}
 		if (isset($target_segments[$segment])) {

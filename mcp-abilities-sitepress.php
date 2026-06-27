@@ -223,6 +223,7 @@ function mcp_wpml_render_translated_contact_form_7_shortcode($return, string $ta
 		return $return;
 	}
 
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 	$current_lang = apply_filters('wpml_current_language', null);
 	$current_lang = is_string($current_lang) ? $current_lang : '';
 	if ('' === $current_lang || $current_lang === mcp_wpml_default_lang()) {

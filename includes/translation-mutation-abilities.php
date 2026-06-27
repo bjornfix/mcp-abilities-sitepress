@@ -236,4 +236,95 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		)
 	);
 
+	$update_contact_form_7_translation_form = function ($input = array()): array {
+		$input     = is_array($input) ? $input : array();
+		$target_id = isset($input['target_id']) ? (int) $input['target_id'] : 0;
+		$form      = isset($input['form']) ? (string) $input['form'] : '';
+		$locale    = isset($input['locale']) ? sanitize_text_field((string) $input['locale']) : '';
+		$title     = isset($input['title']) ? sanitize_text_field((string) $input['title']) : '';
+
+		if ($target_id <= 0 || '' === trim($form)) {
+			return array('success' => false, 'message' => 'target_id and form are required.');
+		}
+
+		$post = get_post($target_id);
+		if (!$post || 'wpcf7_contact_form' !== (string) $post->post_type) {
+			return array(
+				'success' => false,
+				'message' => 'Target post must be a Contact Form 7 form.',
+				'post_type' => $post ? (string) $post->post_type : '',
+			);
+		}
+
+		$updated = array();
+		update_post_meta($target_id, '_form', wp_kses_post($form));
+		$updated[] = '_form';
+
+		if ('' !== $locale) {
+			update_post_meta($target_id, '_locale', $locale);
+			$updated[] = '_locale';
+		}
+
+		if ('' !== $title && $title !== (string) $post->post_title) {
+			wp_update_post(
+				array(
+					'ID' => $target_id,
+					'post_title' => $title,
+				)
+			);
+			$updated[] = 'post_title';
+		}
+
+		clean_post_cache($target_id);
+
+		return array(
+			'success' => true,
+			'target_id' => $target_id,
+			'post_type' => 'wpcf7_contact_form',
+			'updated' => $updated,
+			'message' => 'Contact Form 7 translated form template updated.',
+		);
+	};
+
+	wp_register_ability(
+		'wpml/update-contact-form-7-translation-form',
+		array(
+			'label' => 'Update Contact Form 7 Translation Form',
+			'description' => 'Updates the native Contact Form 7 form template and locale for a translated wpcf7_contact_form post.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'required' => array('target_id', 'form'),
+				'properties' => array(
+					'target_id' => array('type' => 'integer'),
+					'form' => array('type' => 'string'),
+					'locale' => array('type' => 'string'),
+					'title' => array('type' => 'string'),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array('type' => 'boolean'),
+					'target_id' => array('type' => 'integer'),
+					'post_type' => array('type' => 'string'),
+					'updated' => array('type' => 'array', 'items' => array('type' => 'string')),
+					'message' => array('type' => 'string'),
+				),
+			),
+			'execute_callback' => $update_contact_form_7_translation_form,
+			'permission_callback' => function (): bool {
+				return current_user_can('edit_pages');
+			},
+			'meta' => array(
+				'annotations' => array(
+					'readonly' => false,
+					'destructive' => false,
+					'idempotent' => true,
+				),
+			),
+		)
+	);
+
 }

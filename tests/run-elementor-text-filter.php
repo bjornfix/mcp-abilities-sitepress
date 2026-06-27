@@ -99,3 +99,43 @@ if (str_contains($integrity_file, "'data-locale=\"nb-NO\"'") || str_contains($in
 }
 
 echo "Frontend marker defaults test passed\n";
+
+$gallery_candidates = array();
+$image_widget = array(
+	array(
+		'id' => 'img1',
+		'widgetType' => 'image',
+		'settings' => array(
+			'image' => array('id' => 123),
+		),
+	),
+);
+mcp_wpml_collect_gallery_widgets($image_widget, $gallery_candidates, array('post_id' => 1));
+if (!empty($gallery_candidates)) {
+	fwrite(STDERR, "Image widgets must not be treated as galleries by default\n");
+	exit(1);
+}
+
+mcp_wpml_collect_gallery_widgets($image_widget, $gallery_candidates, array('post_id' => 1), true);
+if (1 !== count($gallery_candidates) || empty($gallery_candidates[0]['single_image_equivalent']) || array(123) !== $gallery_candidates[0]['attachment_ids']) {
+	fwrite(STDERR, "Single-image gallery equivalent was not collected correctly\n");
+	exit(1);
+}
+
+$matched_gallery_ids = array();
+$matched_gallery = mcp_wpml_find_matching_gallery_widget(
+	array(
+		'element_id' => 'carousel1',
+		'attachment_ids' => array(123),
+		'count' => 1,
+	),
+	array(),
+	$gallery_candidates,
+	$matched_gallery_ids
+);
+if (null === $matched_gallery || 'img1' !== $matched_gallery['element_id']) {
+	fwrite(STDERR, "Single-image gallery equivalent did not match a one-item source gallery\n");
+	exit(1);
+}
+
+echo "Single-image gallery equivalent test passed\n";

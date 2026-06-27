@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.45
+ * Version: 0.3.46
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -498,7 +498,7 @@ function mcp_wpml_attachment_size_file_exists(int $attachment_id, string $size):
 	);
 }
 
-function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, array $post_info): void {
+function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, array $post_info, bool $include_single_images = false): void {
 	foreach ($elements as $element) {
 		if (!is_array($element)) {
 			continue;
@@ -532,6 +532,13 @@ function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, ar
 			}
 		}
 
+		if ($include_single_images && 'image' === $widget_type && isset($settings['image']) && is_array($settings['image'])) {
+			$image_id = isset($settings['image']['id']) && is_numeric($settings['image']['id']) ? (int) $settings['image']['id'] : 0;
+			if ($image_id > 0) {
+				$attachment_ids[] = $image_id;
+			}
+		}
+
 		$attachment_ids = array_values(array_unique($attachment_ids));
 		if (!empty($attachment_ids) && (str_contains($widget_type, 'gallery') || str_contains($widget_type, 'carousel') || !empty($settings['gallery']) || !empty($settings['wp_gallery']))) {
 			$galleries[] = array_merge(
@@ -543,15 +550,26 @@ function mcp_wpml_collect_gallery_widgets(array $elements, array &$galleries, ar
 					'count'          => count($attachment_ids),
 				)
 			);
+		} elseif ($include_single_images && !empty($attachment_ids) && 'image' === $widget_type) {
+			$galleries[] = array_merge(
+				$post_info,
+				array(
+					'element_id'              => isset($element['id']) ? (string) $element['id'] : '',
+					'widget_type'             => $widget_type,
+					'attachment_ids'          => $attachment_ids,
+					'count'                   => count($attachment_ids),
+					'single_image_equivalent' => true,
+				)
+			);
 		}
 
 		if (!empty($element['elements']) && is_array($element['elements'])) {
-			mcp_wpml_collect_gallery_widgets($element['elements'], $galleries, $post_info);
+			mcp_wpml_collect_gallery_widgets($element['elements'], $galleries, $post_info, $include_single_images);
 		}
 	}
 }
 
-function mcp_wpml_gallery_widgets_for_post(int $post_id, string $post_type = ''): array {
+function mcp_wpml_gallery_widgets_for_post(int $post_id, string $post_type = '', bool $include_single_images = false): array {
 	$post = get_post($post_id);
 	if (!$post) {
 		return array();
@@ -573,7 +591,8 @@ function mcp_wpml_gallery_widgets_for_post(int $post_id, string $post_type = '')
 			'lang'      => $lang,
 			'title'     => get_the_title($post_id),
 			'link'      => get_permalink($post_id),
-		)
+		),
+		$include_single_images
 	);
 	return $galleries;
 }

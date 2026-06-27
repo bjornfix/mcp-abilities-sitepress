@@ -159,7 +159,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 
 			if ($check_galleries) {
 				$source_galleries = mcp_wpml_gallery_widgets_for_post((int) $source_id, (string) $source->post_type);
-				$target_galleries = mcp_wpml_gallery_widgets_for_post((int) $target_id, (string) $target->post_type);
+				$target_galleries = mcp_wpml_gallery_widgets_for_post((int) $target_id, (string) $target->post_type, !empty($source_galleries));
 				if (!empty($source_galleries) || !empty($target_galleries)) {
 					$gallery_checked++;
 					$source_by_id = array();
@@ -192,6 +192,9 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 						}
 					}
 					foreach ($target_by_id as $element_id => $target_gallery) {
+						if (!empty($target_gallery['single_image_equivalent'])) {
+							continue;
+						}
 						$caption_issues = mcp_wpml_gallery_attachment_caption_issues((array) $target_gallery['attachment_ids'], $target_lang);
 						if (!empty($caption_issues)) {
 							$issues[] = array(

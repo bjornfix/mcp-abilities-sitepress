@@ -11,6 +11,42 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+function mcp_wpml_gallery_widget_signature(array $gallery): string {
+	$attachment_ids = isset($gallery['attachment_ids']) && is_array($gallery['attachment_ids']) ? $gallery['attachment_ids'] : array();
+	$attachment_ids = array_values(array_unique(array_filter(array_map('intval', $attachment_ids))));
+	sort($attachment_ids, SORT_NUMERIC);
+	return implode(',', $attachment_ids);
+}
+
+function mcp_wpml_find_matching_gallery_widget(array $source_gallery, array $target_by_id, array $target_galleries, array &$matched_target_gallery_ids): ?array {
+	$source_element_id = (string) ($source_gallery['element_id'] ?? '');
+	if ('' !== $source_element_id && isset($target_by_id[$source_element_id])) {
+		$matched_target_gallery_ids[$source_element_id] = true;
+		return $target_by_id[$source_element_id];
+	}
+
+	$source_signature = mcp_wpml_gallery_widget_signature($source_gallery);
+	if ('' === $source_signature) {
+		return null;
+	}
+
+	foreach ($target_galleries as $target_gallery) {
+		$target_element_id = (string) ($target_gallery['element_id'] ?? '');
+		if ('' !== $target_element_id && !empty($matched_target_gallery_ids[$target_element_id])) {
+			continue;
+		}
+		if ($source_signature !== mcp_wpml_gallery_widget_signature($target_gallery)) {
+			continue;
+		}
+		if ('' !== $target_element_id) {
+			$matched_target_gallery_ids[$target_element_id] = true;
+		}
+		return $target_gallery;
+	}
+
+	return null;
+}
+
 function mcp_wpml_register_translation_integrity_abilities(): void {
 	$audit_translation_integrity = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
@@ -134,8 +170,10 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 					foreach ($target_galleries as $gallery) {
 						$target_by_id[(string) $gallery['element_id']] = $gallery;
 					}
+					$matched_target_gallery_ids = array();
 					foreach ($source_by_id as $element_id => $source_gallery) {
-						if (!isset($target_by_id[$element_id])) {
+						$target_gallery = mcp_wpml_find_matching_gallery_widget($source_gallery, $target_by_id, $target_galleries, $matched_target_gallery_ids);
+						if (null === $target_gallery) {
 							$issues[] = array(
 								'reason' => 'gallery_missing_in_target',
 								'element_id' => $element_id,
@@ -143,12 +181,13 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 							);
 							continue;
 						}
-						if ((int) $source_gallery['count'] !== (int) $target_by_id[$element_id]['count']) {
+						if ((int) $source_gallery['count'] !== (int) $target_gallery['count']) {
 							$issues[] = array(
 								'reason' => 'gallery_item_count_mismatch',
 								'element_id' => $element_id,
+								'target_element_id' => (string) ($target_gallery['element_id'] ?? ''),
 								'source_count' => (int) $source_gallery['count'],
-								'target_count' => (int) $target_by_id[$element_id]['count'],
+								'target_count' => (int) $target_gallery['count'],
 							);
 						}
 					}

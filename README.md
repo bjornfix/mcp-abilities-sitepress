@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.42
+**Stable tag:** 0.3.43
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,10 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 ## Changelog
+
+### 0.3.43
+
+- Ignored language-neutral web/platform terms in shared-term translation integrity checks so required privacy-policy terms like Google, Facebook, and cookies do not create false positives.
 
 ### 0.3.42
 

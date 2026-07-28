@@ -8,7 +8,7 @@ WPML translation mapping and translation-shell helper abilities for MCP.
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.47
+**Stable tag:** 0.3.48
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,11 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
 ## Changelog
+
+### 0.3.48
+
+- Aligned the public package author and contributor identity with the Basicus release identity.
+- Documented all 29 registered SitePress abilities in the public inventory.
 
 ### 0.3.47
 
@@ -231,7 +236,7 @@ If you are new to the stack, use this order:
 
 If you skip base-stack verification and start with add-ons immediately, troubleshooting gets harder than it needs to be.
 
-## Abilities (27)
+## Abilities (29)
 
 | Ability | Description |
 |---------|-------------|
@@ -263,6 +268,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `wpml/repair-elementor-gallery-media` | Repair translated Elementor gallery media metadata/files |
 | `wpml/audit-elementor-gallery-media` | Audit translated Elementor galleries and media captions |
 | `wpml/update-media-captions-batch` | Batch update translated media captions |
+| `wpml/update-contact-form-7-translation-form` | Update the native form template and locale for a translated Contact Form 7 form |
 
 ## Usage Examples
 

@@ -64,20 +64,6 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		$max_items = isset($input['max_items']) ? max(1, min(500, (int) $input['max_items'])) : 200;
 		$ignore_terms = isset($input['ignore_terms']) && is_array($input['ignore_terms']) ? $input['ignore_terms'] : array();
 		$frontend_markers = isset($input['frontend_markers']) && is_array($input['frontend_markers']) ? $input['frontend_markers'] : array();
-		if (empty($frontend_markers) && 'en' === $target_lang) {
-			$frontend_markers = array(
-				'Book gratis',
-				'Gratis hjemmebesøk',
-				'Norskprodusert',
-				'Når kvalitet',
-				'ÅPNINGSTIDER',
-				'KONTAKT OSS',
-				'Vi er spesialister',
-				'Hos oss får du',
-				'Klar for din drømmegarderobe',
-				'uncategorized-no',
-			);
-		}
 
 		if ('' === $source_lang || '' === $target_lang || empty($post_types)) {
 			return array('success' => false, 'message' => 'source_lang, target_lang, and post_types are required.');
@@ -195,7 +181,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 						if (!empty($target_gallery['single_image_equivalent']) || !empty($target_gallery['background_image_equivalent'])) {
 							continue;
 						}
-						$caption_issues = mcp_wpml_gallery_attachment_caption_issues((array) $target_gallery['attachment_ids'], $target_lang);
+						$caption_issues = mcp_wpml_gallery_attachment_caption_issues((array) $target_gallery['attachment_ids'], $target_lang, $frontend_markers);
 						if (!empty($caption_issues)) {
 							$issues[] = array(
 								'reason' => 'gallery_caption_language_issues',
@@ -375,7 +361,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 			'input_schema' => array(
 				'type'       => 'object',
 				'properties' => array(
-					'source_lang' => array('type' => 'string', 'default' => 'no'),
+					'source_lang' => array('type' => 'string', 'description' => 'Source language code. Defaults to the WPML site default.'),
 					'target_lang' => array('type' => 'string', 'default' => 'en'),
 					'post_types'  => array('type' => 'array', 'items' => array('type' => 'string'), 'default' => array('page', 'post')),
 					'status'      => array('type' => 'string', 'enum' => array('publish', 'draft', 'pending', 'private', 'any'), 'default' => 'publish'),

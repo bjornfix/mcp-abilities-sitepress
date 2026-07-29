@@ -216,6 +216,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 		$repair_thumbnails = !empty($input['repair_thumbnails']);
 		$force = !empty($input['force']);
 		$caption_audit = !array_key_exists('caption_audit', $input) || (bool) $input['caption_audit'];
+		$caption_language = isset($input['caption_language']) ? sanitize_key((string) $input['caption_language']) : 'en';
+		$source_language = isset($input['source_language']) ? sanitize_key((string) $input['source_language']) : mcp_wpml_default_lang();
+		$source_language_markers = isset($input['source_language_markers']) && is_array($input['source_language_markers']) ? $input['source_language_markers'] : array();
 
 		$galleries = array();
 		$scanned_posts = 0;
@@ -339,9 +342,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 			$caption = (string) get_post_field('post_excerpt', $attachment_id, 'raw');
 			$description = (string) get_post_field('post_content', $attachment_id, 'raw');
 			$source_id = 0;
-			if ('en' === $lang) {
+			if ($caption_language === $lang && '' !== $source_language) {
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WPML media translation lookup.
-				$translated = apply_filters('wpml_object_id', $attachment_id, 'attachment', false, 'no');
+				$translated = apply_filters('wpml_object_id', $attachment_id, 'attachment', false, $source_language);
 				$source_id = is_numeric($translated) ? (int) $translated : 0;
 			}
 
@@ -359,9 +362,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 			);
 			$media[] = $item;
 
-			if ($caption_audit && 'en' === $lang) {
+			if ($caption_audit && $caption_language === $lang && !empty($source_language_markers)) {
 				$combined = $title . "\n" . $caption . "\n" . $description;
-				if (mcp_wpml_text_has_norwegian_markers($combined)) {
+				if (mcp_wpml_text_has_source_language_markers($combined, $source_language_markers)) {
 					$item['source_title'] = $source_id > 0 ? (string) get_post_field('post_title', $source_id, 'raw') : '';
 					$item['source_caption'] = $source_id > 0 ? (string) get_post_field('post_excerpt', $source_id, 'raw') : '';
 					$item['source_description'] = $source_id > 0 ? (string) get_post_field('post_content', $source_id, 'raw') : '';
@@ -403,7 +406,7 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 		'wpml/audit-elementor-gallery-media',
 		array(
 			'label'       => 'Audit Elementor Gallery Media',
-			'description' => 'Find published Elementor galleries, optionally regenerate gallery thumbnails, and report English media captions that still look Norwegian.',
+			'description' => 'Find published Elementor galleries, optionally regenerate gallery thumbnails, and report captions containing caller-supplied source-language markers.',
 			'category'    => 'site',
 			'input_schema' => array(
 				'type'       => 'object',
@@ -414,6 +417,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 					'repair_thumbnails' => array('type' => 'boolean', 'default' => false),
 					'force' => array('type' => 'boolean', 'default' => false),
 					'caption_audit' => array('type' => 'boolean', 'default' => true),
+					'caption_language' => array('type' => 'string', 'default' => 'en'),
+					'source_language' => array('type' => 'string', 'description' => 'WPML source language code used to locate matching media.'),
+					'source_language_markers' => array('type' => 'array', 'items' => array('type' => 'string'), 'description' => 'Exact source-language words or phrases to flag in target captions.'),
 				),
 				'additionalProperties' => false,
 			),

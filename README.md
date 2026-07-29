@@ -2,13 +2,13 @@
 
 WPML translation mapping and translation-shell helper abilities for MCP.
 
-[![Release 0.3.48](https://img.shields.io/badge/release-0.3.48-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.49](https://img.shields.io/badge/release-0.3.49-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 0.3.48
+**Stable tag:** 0.3.49
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,12 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
-## Changelog
+## Recent Changes
+
+### 0.3.49
+
+- Replaced built-in source-language assumptions with caller-supplied language codes and exact marker lists.
+- Normalized locale-specific Trustpilot hosts without depending on one language.
 
 ### 0.3.48
 
@@ -278,7 +283,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 {
   "ability_name": "wpml/list-page-translation-status",
   "parameters": {
-    "source_lang": "no",
+    "source_lang": "fr",
     "target_lang": "en",
     "per_page": 20,
     "page": 1
@@ -309,7 +314,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
   "parameters": {
     "source_id": 123,
     "target_id": 456,
-    "ignore_terms": ["devenia", "oslo"]
+    "ignore_terms": ["example-brand", "paris"]
   }
 }
 ```
@@ -320,7 +325,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 {
   "ability_name": "wpml/audit-translation-coverage",
   "parameters": {
-    "source_lang": "no",
+    "source_lang": "fr",
     "target_lang": "en",
     "post_types": ["page", "post", "elementor_library"],
     "status": "publish",

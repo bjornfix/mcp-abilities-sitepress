@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 0.3.48
+Stable tag: 0.3.49
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -62,6 +62,11 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.49 =
+
+* Replaced built-in source-language assumptions with caller-supplied language codes and exact marker lists.
+* Normalized locale-specific Trustpilot hosts without depending on one language.
 
 = 0.3.48 =
 

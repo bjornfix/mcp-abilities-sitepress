@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.48
+ * Version: 0.3.49
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -617,8 +617,11 @@ function mcp_wpml_gallery_widgets_for_post(int $post_id, string $post_type = '',
 	return $galleries;
 }
 
-function mcp_wpml_gallery_attachment_caption_issues(array $attachment_ids, string $target_lang = 'en'): array {
+function mcp_wpml_gallery_attachment_caption_issues(array $attachment_ids, string $target_lang = 'en', array $source_language_markers = array()): array {
 	$issues = array();
+	if (empty($source_language_markers)) {
+		return $issues;
+	}
 	foreach (array_values(array_unique(array_map('intval', $attachment_ids))) as $attachment_id) {
 		if ($attachment_id <= 0) {
 			continue;
@@ -631,7 +634,7 @@ function mcp_wpml_gallery_attachment_caption_issues(array $attachment_ids, strin
 		$title = (string) get_post_field('post_title', $attachment_id, 'raw');
 		$caption = (string) get_post_field('post_excerpt', $attachment_id, 'raw');
 		$description = (string) get_post_field('post_content', $attachment_id, 'raw');
-		if (mcp_wpml_text_has_norwegian_markers($title . "\n" . $caption . "\n" . $description)) {
+		if (mcp_wpml_text_has_source_language_markers($title . "\n" . $caption . "\n" . $description, $source_language_markers)) {
 			$issues[] = array(
 				'id'          => $attachment_id,
 				'title'       => $title,
@@ -643,21 +646,20 @@ function mcp_wpml_gallery_attachment_caption_issues(array $attachment_ids, strin
 	return $issues;
 }
 
-function mcp_wpml_text_has_norwegian_markers(string $text): bool {
-	$haystack = mb_strtolower(wp_strip_all_tags(html_entity_decode($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')), 'UTF-8');
-	$haystack = str_replace('garderobemekka', '', $haystack);
+function mcp_wpml_text_has_source_language_markers(string $text, array $markers): bool {
+	$lower = static function (string $value): string {
+		return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+	};
+	$haystack = $lower(wp_strip_all_tags(html_entity_decode($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
 	if ('' === trim($haystack)) {
 		return false;
 	}
 
-	$markers = array(
-		'skyvedør', 'skyvedører', 'garderobeløsning', 'garderobeløsningen', 'garderobeinnredning',
-		'innredning', 'entré', 'soverom', 'svarte', 'sorte', 'sølv', 'sotet', 'klart speil', 'speil',
-		'sprosser', 'på mål', 'etter mål', 'måltilpasset', 'skreddersydd', 'oppbevaring',
-		'hvitt', 'sort', 'svart', 'treverk', 'åpen', 'lukket', 'med benk', 'praktisk',
-		'hjørnegarderobe', 'vaskerom', 'rundt dørene', 'brons efarget', 'bronsefarget',
-	);
 	foreach ($markers as $marker) {
+		$marker = $lower(trim(wp_strip_all_tags((string) $marker)));
+		if ('' === $marker) {
+			continue;
+		}
 		if (preg_match('/(^|[^\p{L}])' . preg_quote($marker, '/') . '($|[^\p{L}])/u', $haystack)) {
 			return true;
 		}
@@ -1387,14 +1389,6 @@ function mcp_wpml_target_permalink_issues(int $source_id, int $target_id, string
 		$issues[] = array(
 			'reason' => 'target_url_missing_language_prefix',
 			'url'    => $target_url,
-		);
-	}
-
-	if ('en' === $target_lang && str_contains($target_path, '/uncategorized-no/')) {
-		$issues[] = array(
-			'reason' => 'source_language_uncategorized_segment_in_target_url',
-			'url'    => $target_url,
-			'segment'=> 'uncategorized-no',
 		);
 	}
 

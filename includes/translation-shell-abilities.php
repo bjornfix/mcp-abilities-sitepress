@@ -623,7 +623,7 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 								);
 								if ($fix) {
 									$value = preg_replace('/data-locale="[^"]+"/', 'data-locale="' . $expected_trustpilot_locale . '"', $value);
-									$value = str_replace('https://no.trustpilot.com/', 'https://www.trustpilot.com/', (string) $value);
+									$value = preg_replace('#https://[a-z]{2}(?:-[a-z]{2})?\.trustpilot\.com/#i', 'https://www.trustpilot.com/', (string) $value);
 									$node['settings'][$key] = $value;
 									$changed = true;
 								}

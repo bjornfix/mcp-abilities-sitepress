@@ -30,12 +30,12 @@ mcp_wpml_collect_elementor_text_values(
 	array(
 		'id' => 'abc123',
 		'__globals__' => array(
-			'title_color' => 'globals/colors?id=g1-live-teal',
-			'typography_typography' => 'globals/typography?id=g1-home-reference-heading',
+			'title_color' => 'globals/colors?id=example-live-teal',
+			'typography_typography' => 'globals/typography?id=example-home-reference-heading',
 		),
 		'settings' => array(
 			'title' => 'Professional expertise gives peace of mind',
-			'typography_typography' => 'globals/typography?id=g1-product-body',
+			'typography_typography' => 'globals/typography?id=example-product-body',
 			'editor' => '<p>Glass canopy text remains visible.</p>',
 		),
 	),
@@ -93,12 +93,23 @@ if (false === $integrity_file) {
 	fwrite(STDERR, "Could not read translation integrity ability file\n");
 	exit(1);
 }
-if (str_contains($integrity_file, "'data-locale=\"nb-NO\"'") || str_contains($integrity_file, "'no.trustpilot.com'")) {
-	fwrite(STDERR, "Global Trustpilot locale markers must not be default frontend source-language markers\n");
+if (str_contains($integrity_file, "'source_lang' => array('type' => 'string', 'default'") ) {
+	fwrite(STDERR, "Translation integrity must derive the source language from WPML instead of shipping a site-specific default\n");
 	exit(1);
 }
 
 echo "Frontend marker defaults test passed\n";
+
+if (!mcp_wpml_text_has_source_language_markers('A source phrase remains in the target caption.', array('source phrase'))) {
+	fwrite(STDERR, "Caller-supplied source-language marker was not detected\n");
+	exit(1);
+}
+if (mcp_wpml_text_has_source_language_markers('A clean target caption.', array())) {
+	fwrite(STDERR, "An empty marker list must not invent language-specific findings\n");
+	exit(1);
+}
+
+echo "Caller-supplied source-language marker test passed\n";
 
 $gallery_candidates = array();
 $image_widget = array(

@@ -4,6 +4,8 @@
  * Plugin URI: https://devenia.com
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
  * Version: 0.3.49
+ * Requires at least: 6.9
+ * Requires PHP: 8.0
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+

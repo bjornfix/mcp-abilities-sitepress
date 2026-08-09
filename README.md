@@ -20,6 +20,29 @@ This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capa
 
 It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
 
+## Reader workflows
+
+The 29 registered abilities form seven reader workflows:
+
+- Translation discovery and status (8): list active languages, language-scoped posts and terms, page translation status, post and term translation groups, element language details, and reusable translation candidates.
+- Translation creation and mapping (5): create missing page or post translation shells, register language details, link an existing translation, and update the translated slug, categories, and primary category in its WPML language context.
+- Link and coverage audits (3): inspect or explicitly fix source-language links, batch the same audit across translated posts, and report missing or stale translations.
+- Language-switcher recovery (5): inspect settings and slots, validate their structure, reset the stored option, and rebuild it through WPML.
+- Translation integrity (2): detect copied source-language text and audit translated content, URLs, galleries, media captions, and frontend gallery assets.
+- Elementor and media maintenance (4): audit or explicitly fix language-specific Elementor assets, audit translated galleries, repair gallery thumbnails and metadata, and update selected media text fields.
+- Optional integration maintenance (2): remove one exact Yoast Premium redirect and update one translated Contact Form 7 form template and locale.
+
+## Authorization and change boundaries
+
+- Every operation requires an authenticated WordPress user. Translation reads and content operations require the relevant page, post, or item editing capability.
+- Language-switcher recovery, translation linking, and exact Yoast redirect removal require `manage_options`. Media changes require `upload_files`, with page editing permission where a gallery page is changed.
+- Link audits and Elementor language-asset audits are read-only unless the caller explicitly enables their `fix` input. Gallery audits repair thumbnails only when the caller explicitly enables repair.
+- Translation creation reuses an existing linked translation instead of creating a duplicate. Targeted mutations require the exact source or target item and language context.
+- Gallery repair can run as a dry run. Existing valid image sizes are regenerated only when the caller explicitly enables `force`.
+- Elementor, Contact Form 7, Yoast Premium, Rank Math, and Trustpilot-specific behavior is used only by the matching targeted operation when that integration is present. The 29 abilities still require WPML as their multilingual state owner.
+
+[Download MCP Abilities - SitePress](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+
 ## Recent Changes
 
 ### 0.3.49

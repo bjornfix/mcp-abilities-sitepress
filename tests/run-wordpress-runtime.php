@@ -1,11 +1,11 @@
 <?php
 /** Native WordPress storage/capability checks; WPML hooks are explicit fixtures. */
 if (!defined('ABSPATH') || !function_exists('wp_get_ability')) { throw new RuntimeException('WordPress required.'); }
-if (defined('ICL_SITEPRESS_VERSION')) { throw new RuntimeException('Use the authorized validation site without active WPML.'); }
-define('ICL_SITEPRESS_VERSION', 'contract-fixture');
+if (!defined('ICL_SITEPRESS_VERSION') || 'contract-fixture' !== ICL_SITEPRESS_VERSION) { throw new RuntimeException('Load the test flag before WordPress using --require.'); }
 $sitepress = new class {
  public function get_active_languages() { return array('en'=>array('code'=>'en','default_locale'=>'en_GB'), 'fr'=>array('code'=>'fr','default_locale'=>'fr_FR')); }
 };
+$GLOBALS['sitepress'] = $sitepress;
 $fixture_details = array();
 $persist_links = true;
 add_filter('wpml_element_type', static function($type) { return 'post_' . $type; });
@@ -78,11 +78,12 @@ try {
  $occupied=$create(array('post_type'=>'post','post_status'=>'publish','post_title'=>'SitePress occupied fixture','post_name'=>'sitepress-native-slug-fixture'));
  $renamed=$create(array('post_type'=>'post','post_status'=>'publish','post_title'=>'SitePress rename fixture','post_name'=>'sitepress-native-previous-fixture'));
  $before_slug=get_post($renamed)->post_name;
+ $expected_slug=wp_unique_post_slug(get_post($occupied)->post_name,$renamed,get_post_status($renamed),'post',0);
  $fixture_details[$renamed]=(object)array('trid'=>$renamed,'language_code'=>'fr','source_language_code'=>null);
  $r=$run('wpml/update-translated-post-url',array('id'=>$renamed,'target_lang'=>'fr','slug'=>get_post($occupied)->post_name));
- $check($r['success'] && $r['after_slug']!==get_post($occupied)->post_name,'Native slug uniqueness was bypassed.');
- $check(in_array($before_slug,get_post_meta($renamed,'_wp_old_slug',false),true),'Old slug history removed.');
- echo "PASS: native WordPress abilities, permissions, draft creation, content bytes and slug history; WPML integration uses fixture hooks\n";
+ $check($r['success'] && $r['after_slug']===$expected_slug,'Native slug uniqueness was bypassed.');
+ if ('publish'===get_post_status($renamed) && $before_slug!==$expected_slug) { $check(in_array($before_slug,get_post_meta($renamed,'_wp_old_slug',false),true),'Old slug history removed.'); }
+ echo "PASS: native WordPress abilities, permissions, draft creation, content bytes and native slug policy; WPML integration uses fixture hooks\n";
 } finally {
  foreach (array_unique($ids) as $id) { wp_delete_post($id,true); }
 }

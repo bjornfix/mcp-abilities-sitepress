@@ -74,7 +74,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 			foreach ($input['source_ids'] as $source_id) {
 				$source_id = (int) $source_id;
 				$source_post = $source_id > 0 ? get_post($source_id) : null;
-				if (!$source_post) {
+				if (!$source_post || !current_user_can('read_post', $source_id)) {
 					continue;
 				}
 				$target_id = mcp_wpml_target_id_for_post_type($source_id, (string) $source_post->post_type, $target_lang);
@@ -117,7 +117,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		$gallery_checked = 0;
 		foreach (array_keys($target_ids) as $target_id) {
 			$target = get_post((int) $target_id);
-			if (!$target || !in_array((string) $target->post_type, $post_types, true)) {
+			if (!$target || !current_user_can('read_post', (int) $target_id) || !in_array((string) $target->post_type, $post_types, true)) {
 				continue;
 			}
 
@@ -127,6 +127,9 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 			}
 			$source_id = mcp_wpml_target_id_for_post_type((int) $target_id, (string) $target->post_type, $source_lang);
 			$source = $source_id > 0 ? get_post($source_id) : null;
+			if ($source && !current_user_can('read_post', $source_id)) {
+				continue;
+			}
 			if (!$source) {
 				$items[] = array(
 					'target_id' => (int) $target_id,
@@ -475,7 +478,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		if (!$post) {
 			return array('success' => false, 'message' => 'Target post not found.');
 		}
-		if (!current_user_can('edit_post', $id)) {
+		if (!current_user_can('read_post', $id) || !current_user_can('read_post', $source_id)) {
 			return array('success' => false, 'message' => 'You do not have permission to inspect this post.');
 		}
 
@@ -590,7 +593,6 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		$input = is_array($input) ? $input : array();
 		$origin = isset($input['origin']) ? trim((string) $input['origin'], " \t\n\r\0\x0B/") : '';
 		$url = isset($input['url']) ? trim((string) $input['url'], " \t\n\r\0\x0B/") : '';
-		$clean_htaccess = !array_key_exists('clean_htaccess', $input) || (bool) $input['clean_htaccess'];
 
 		if ('' === $origin || '' === $url) {
 			return array(
@@ -599,88 +601,34 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 			);
 		}
 
-		$removed = array(
-			'base' => array(),
-			'export_plain' => array(),
-		);
-
-		$base = get_option('wpseo-premium-redirects-base', array());
-		if (is_array($base)) {
-			foreach ($base as $key => $redirect) {
-				if (
-					is_array($redirect)
-					&& isset($redirect['origin'], $redirect['url'])
-					&& trim((string) $redirect['origin'], '/') === $origin
-					&& trim((string) $redirect['url'], '/') === $url
-				) {
-					$removed['base'][(string) $key] = $redirect;
-					unset($base[$key]);
-				}
-			}
-			if (!empty($removed['base'])) {
-				update_option('wpseo-premium-redirects-base', $base, false);
-			}
+		if (!class_exists('WPSEO_Redirect_Manager')) {
+			return array('success' => false, 'message' => 'Yoast SEO Premium redirect manager must be active.');
 		}
-
-		$plain = get_option('wpseo-premium-redirects-export-plain', array());
-		if (is_array($plain)) {
-			foreach ($plain as $key => $redirect) {
-				if (
-					trim((string) $key, '/') === $origin
-					&& is_array($redirect)
-					&& isset($redirect['url'])
-					&& trim((string) $redirect['url'], '/') === $url
-				) {
-					$removed['export_plain'][(string) $key] = $redirect;
-					unset($plain[$key]);
-				}
-			}
-			if (!empty($removed['export_plain'])) {
-				update_option('wpseo-premium-redirects-export-plain', $plain, false);
-			}
+		$manager = new WPSEO_Redirect_Manager('plain');
+		if (!is_callable(array($manager, 'get_redirect')) || !is_callable(array($manager, 'delete_redirects'))) {
+			return array('success' => false, 'message' => 'This Yoast version does not expose the required redirect operations.');
 		}
-
-		$htaccess = array(
-			'checked' => false,
-			'writable' => false,
-			'changed' => false,
-			'removed_lines' => array(),
-			'path' => '',
-		);
-
-			if ($clean_htaccess) {
-				$path = trailingslashit(ABSPATH) . '.htaccess';
-				$filesystem = mcp_wpml_filesystem();
-				$htaccess['checked'] = true;
-				$htaccess['path'] = $path;
-				$htaccess['writable'] = is_object($filesystem) && $filesystem->is_writable($path);
-				if (is_object($filesystem) && $filesystem->exists($path) && $htaccess['writable']) {
-					$contents = (string) $filesystem->get_contents($path);
-					$lines = preg_split("/(\r\n|\n|\r)/", $contents);
-					$new_lines = array();
-					foreach ($lines as $line) {
-					$normalized = trim((string) $line);
-					if (false !== strpos($normalized, $origin) && false !== strpos($normalized, $url)) {
-						$htaccess['removed_lines'][] = $line;
-						continue;
-					}
-					$new_lines[] = $line;
-					}
-					if (!empty($htaccess['removed_lines'])) {
-						$ending = false !== strpos($contents, "\r\n") ? "\r\n" : "\n";
-						$filesystem->put_contents($path, implode($ending, $new_lines), FS_CHMOD_FILE);
-						$htaccess['changed'] = true;
-					}
-				}
+		$redirect = $manager->get_redirect('/' . $origin);
+		if (!$redirect) {
+			return array('success' => true, 'origin' => $origin, 'url' => $url, 'removed' => array('count' => 0), 'message' => 'No redirect exists at this origin.');
 		}
-
+		if (!is_callable(array($redirect, 'get_url')) || trim((string) $redirect->get_url(), '/') !== $url) {
+			return array('success' => false, 'message' => 'The redirect destination does not match url.');
+		}
+		if (!$manager->delete_redirects(array($redirect))) {
+			return array('success' => false, 'message' => 'Yoast could not delete the redirect.');
+		}
+		$manager = new WPSEO_Redirect_Manager('plain');
+		if ($manager->get_redirect('/' . $origin)) {
+			return array('success' => false, 'message' => 'Yoast still reports a redirect at this origin.');
+		}
 		return array(
 			'success' => true,
 			'origin' => $origin,
 			'url' => $url,
-			'removed' => $removed,
-			'htaccess' => $htaccess,
-			'message' => 'Yoast redirect options cleaned; .htaccess cleaned when a matching line was found.',
+			'removed' => array('count' => 1),
+			'htaccess' => array('managed_by' => 'Yoast SEO Premium'),
+			'message' => 'Redirect deleted through Yoast. Yoast manages its configured exports.',
 		);
 	};
 
@@ -688,7 +636,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		'wpml/remove-yoast-redirect',
 		array(
 			'label'       => 'Remove Yoast Redirect',
-			'description' => 'Remove one exact Yoast Premium redirect from redirect options and matching .htaccess export lines.',
+			'description' => 'Remove one exact plain redirect through Yoast SEO Premium and its configured export mechanism.',
 			'category'    => 'site',
 			'input_schema' => array(
 				'type'       => 'object',
@@ -696,7 +644,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 				'properties' => array(
 					'origin' => array('type' => 'string', 'description' => 'Redirect origin path without domain.'),
 					'url' => array('type' => 'string', 'description' => 'Redirect target path without domain.'),
-					'clean_htaccess' => array('type' => 'boolean', 'default' => true),
+					'clean_htaccess' => array('type' => 'boolean', 'default' => true, 'description' => 'Deprecated. Yoast manages exports according to its own configuration.'),
 				),
 				'additionalProperties' => false,
 			),
@@ -718,7 +666,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 			'meta' => array(
 				'annotations' => array(
 					'readonly'    => false,
-					'destructive' => false,
+					'destructive' => true,
 					'idempotent'  => true,
 				),
 			),

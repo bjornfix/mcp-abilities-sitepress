@@ -2,8 +2,8 @@
 Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
-Tested up to: 7.0
-Stable tag: 0.3.49
+Tested up to: 7.1
+Stable tag: 0.3.50
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -42,15 +42,16 @@ This plugin exposes core WPML translation workflows through MCP:
 * `wpml/repair-elementor-gallery-media`
 * `wpml/audit-elementor-gallery-media`
 * `wpml/update-media-captions-batch`
+* `wpml/update-contact-form-7-translation-form`
 
 Use it to inspect translation mappings, create missing translation shells, run untranslated-content checks, and safely inspect/recover WPML language-switcher state.
 
-Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
+Plugin page: https://devenia.com/plugins/mcp-abilities-sitepress/
 
 = Compatibility =
 
 * Requires WordPress 6.9 or newer
-* Tested up to WordPress 7.0
+* Tested up to WordPress 7.1
 * Requires PHP 8.0 or newer
 * Intended for sites running WPML SitePress within that same WordPress release line
 
@@ -62,6 +63,14 @@ Plugin page: https://devenia.com/plugins/mcp-expose-abilities/
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.50 =
+
+* Added per-post access checks and verification of translation writes.
+* Prevented conflicting language links and kept unlinked shells as drafts.
+* Preserved native slug uniqueness, URL history, and exact URL replacement.
+* Used configured regional locales and native Contact Form 7, Yoast, and Permalink Manager operations.
+* Clarified switcher reset results and completed the public ability inventory.
 
 = 0.3.49 =
 

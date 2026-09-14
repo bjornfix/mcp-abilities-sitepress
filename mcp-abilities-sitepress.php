@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: MCP Abilities - SitePress
- * Plugin URI: https://devenia.com
+ * Plugin URI: https://devenia.com/plugins/mcp-abilities-sitepress/
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.49
+ * Version: 0.3.50
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: basicus
@@ -64,13 +64,13 @@ function mcp_wpml_target_id_for_post_type(int $source_id, string $post_type, str
 
 function mcp_wpml_element_type_for_post_type(string $post_type): string {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
-	$element_type = apply_filters('wpml_element_type', 'post_' . $post_type);
+	$element_type = apply_filters('wpml_element_type', $post_type);
 	return is_string($element_type) && '' !== $element_type ? $element_type : 'post_' . $post_type;
 }
 
 function mcp_wpml_element_type_for_taxonomy(string $taxonomy): string {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
-	$element_type = apply_filters('wpml_element_type', 'tax_' . $taxonomy);
+	$element_type = apply_filters('wpml_element_type', $taxonomy);
 	return is_string($element_type) && '' !== $element_type ? $element_type : 'tax_' . $taxonomy;
 }
 
@@ -87,7 +87,7 @@ function mcp_wpml_lang_details(int $post_id, string $post_type = '') {
 		null,
 		array(
 			'element_id'   => $post_id,
-			'element_type' => mcp_wpml_element_type_for_post_type($post_type),
+			'element_type' => $post_type,
 		)
 	);
 	return is_object($details) ? $details : null;
@@ -136,7 +136,7 @@ function mcp_wpml_term_lang_details(int $term_id, string $taxonomy) {
 		null,
 		array(
 			'element_id'   => $term_taxonomy_id,
-			'element_type' => mcp_wpml_element_type_for_taxonomy($taxonomy),
+			'element_type' => $taxonomy,
 		)
 	);
 	return is_object($details) ? $details : null;
@@ -294,6 +294,16 @@ function mcp_wpml_post_has_term(int $post_id, int $term_id, string $taxonomy): b
 	}
 
 	return in_array($term_id, array_map('intval', $terms), true);
+}
+
+/** Read configured languages without requiring a frontend query or switcher URLs. */
+function mcp_wpml_configured_languages(): array {
+	global $sitepress;
+	if (!is_object($sitepress) || !is_callable(array($sitepress, 'get_active_languages'))) {
+		return array();
+	}
+	$languages = $sitepress->get_active_languages();
+	return is_array($languages) ? $languages : array();
 }
 
 function mcp_wpml_get_active_languages(bool $skip_missing = false): array {
@@ -625,7 +635,7 @@ function mcp_wpml_gallery_attachment_caption_issues(array $attachment_ids, strin
 		return $issues;
 	}
 	foreach (array_values(array_unique(array_map('intval', $attachment_ids))) as $attachment_id) {
-		if ($attachment_id <= 0) {
+		if ($attachment_id <= 0 || !current_user_can('read_post', $attachment_id)) {
 			continue;
 		}
 		$details = mcp_wpml_lang_details($attachment_id, 'attachment');
@@ -1007,6 +1017,9 @@ function mcp_wpml_replacement_url_like_original(string $original_url, string $ta
 
 function mcp_wpml_replace_url_variants(string $haystack, string $from, string $to): array {
 	$count = 0;
+	if ('' === $from || $from === $to) {
+		return array($haystack, $count);
+	}
 	$variants = array(
 		$from => $to,
 		str_replace('/', '\\/', $from) => str_replace('/', '\\/', $to),
@@ -1014,16 +1027,18 @@ function mcp_wpml_replace_url_variants(string $haystack, string $from, string $t
 		esc_url_raw($from) => esc_url_raw($to),
 	);
 
-	foreach ($variants as $needle => $replacement) {
-		if ('' === $needle || !str_contains($haystack, $needle)) {
-			continue;
-		}
-		$n = substr_count($haystack, $needle);
-		$haystack = str_replace($needle, $replacement, $haystack);
-		$count += $n;
-	}
+	unset($variants['']);
+	$needles = array_map(static function (string $needle): string {
+		return preg_quote($needle, '~');
+	}, array_keys($variants));
+	// Match complete URL tokens in HTML, JSON, CSS, or plain text, once only.
+	$pattern = '~(?<![^\s\'"(=>])(?:' . implode('|', $needles) . ')(?=$|[\s\'"<>)]|\\\\["\'])~';
+	$updated = preg_replace_callback($pattern, static function (array $match) use ($variants, &$count): string {
+		++$count;
+		return $variants[$match[0]];
+	}, $haystack);
 
-	return array($haystack, $count);
+	return array(null === $updated ? $haystack : $updated, null === $updated ? 0 : $count);
 }
 
 function mcp_wpml_status_filter(string $status) {
@@ -1387,7 +1402,9 @@ function mcp_wpml_target_permalink_issues(int $source_id, int $target_id, string
 
 	$target_url = (string) get_permalink($target_id);
 	$target_path = '/' . trim((string) (wp_parse_url($target_url, PHP_URL_PATH) ?: ''), '/') . '/';
-	if ('' !== $target_lang && $target_lang !== mcp_wpml_default_lang() && !str_starts_with($target_path, '/' . trim($target_lang, '/') . '/')) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+	$url_mode = (int) apply_filters('wpml_setting', 0, 'language_negotiation_type');
+	if (1 === $url_mode && '' !== $target_lang && $target_lang !== mcp_wpml_default_lang() && !str_starts_with($target_path, '/' . trim($target_lang, '/') . '/')) {
 		$issues[] = array(
 			'reason' => 'target_url_missing_language_prefix',
 			'url'    => $target_url,

@@ -28,6 +28,9 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 		if (!$post) {
 			return array('success' => false, 'message' => 'Post not found.');
 		}
+		if (!current_user_can('edit_post', $id)) {
+			return array('success' => false, 'message' => 'You cannot inspect or edit this post.');
+		}
 
 		$details = mcp_wpml_lang_details($id, (string) $post->post_type);
 		if ('' === $target_lang && $details && !empty($details->language_code)) {
@@ -144,10 +147,10 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 
 			if ($content_replacements > 0 && $new_content !== (string) $post->post_content) {
 				$result = wp_update_post(
-					array(
+					wp_slash(array(
 						'ID' => $id,
 						'post_content' => $new_content,
-					),
+					)),
 					true
 				);
 				if (is_wp_error($result)) {
@@ -281,6 +284,7 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 		$total_issues = 0;
 		$total_content_replacements = 0;
 		$total_elementor_replacements = 0;
+		$failed_count = 0;
 
 		foreach (array_keys($ids) as $id) {
 			$result = $audit_translated_links(
@@ -294,13 +298,17 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 			);
 
 			$results[] = $result;
+			if (empty($result['success'])) {
+				++$failed_count;
+			}
 			$total_issues += isset($result['issue_count']) ? (int) $result['issue_count'] : 0;
 			$total_content_replacements += isset($result['content_replacements']) ? (int) $result['content_replacements'] : 0;
 			$total_elementor_replacements += isset($result['elementor_replacements']) ? (int) $result['elementor_replacements'] : 0;
 		}
 
 		return array(
-			'success' => true,
+			'success' => 0 === $failed_count,
+			'failed_count' => $failed_count,
 			'target_lang' => $target_lang,
 			'post_type' => empty($input['ids']) ? $post_type : '',
 			'status' => empty($input['ids']) ? $status : '',
@@ -310,9 +318,9 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 			'total_content_replacements' => $total_content_replacements,
 			'total_elementor_replacements' => $total_elementor_replacements,
 			'results' => $results,
-			'message' => $total_issues > 0
+			'message' => $failed_count > 0 ? 'Some posts could not be audited. Review the individual results.' : ($total_issues > 0
 				? ($fix ? 'Batch translated-link audit completed and replacements were applied where possible.' : 'Batch translated-link audit found issues.')
-				: 'Batch translated-link audit found no issues.',
+				: 'Batch translated-link audit found no issues.'),
 		);
 	};
 
@@ -352,6 +360,7 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 					'total_issue_count' => array('type' => 'integer'),
 					'total_content_replacements' => array('type' => 'integer'),
 					'total_elementor_replacements' => array('type' => 'integer'),
+					'failed_count' => array('type' => 'integer'),
 					'results' => array('type' => 'array'),
 					'message' => array('type' => 'string'),
 				),
@@ -379,7 +388,7 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 		$include_stale = !array_key_exists('include_stale', $input) || (bool) $input['include_stale'];
 
 		if ('' === $target_lang) {
-			foreach (mcp_wpml_get_active_languages(false) as $language) {
+			foreach (mcp_wpml_configured_languages() as $language) {
 				$code = isset($language['code']) ? sanitize_key((string) $language['code']) : '';
 				if ('' !== $code && $code !== $source_lang) {
 					$target_lang = $code;
@@ -442,7 +451,7 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 
 		foreach (array_keys($ids) as $id) {
 			$post = get_post((int) $id);
-			if (!$post || !in_array((string) $post->post_type, $post_types, true)) {
+			if (!$post || !current_user_can('read_post', (int) $id) || !in_array((string) $post->post_type, $post_types, true)) {
 				continue;
 			}
 			$scanned++;
@@ -456,6 +465,9 @@ function mcp_wpml_register_translation_link_audit_abilities(): void {
 
 			$target_id = mcp_wpml_target_id_for_post_type((int) $id, (string) $post->post_type, $target_lang);
 			$target = $target_id > 0 ? get_post($target_id) : null;
+			if ($target && !current_user_can('read_post', $target_id)) {
+				continue;
+			}
 			if (!$target || 'trash' === (string) $target->post_status) {
 				$missing_count++;
 				$items[] = array(

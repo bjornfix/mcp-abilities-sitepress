@@ -15,7 +15,10 @@ function mcp_wpml_register_translation_query_abilities(): void {
 	$list_active_languages = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
 		$skip_missing = !empty($input['skip_missing']);
-		$languages = mcp_wpml_get_active_languages($skip_missing);
+		if ($skip_missing && !did_action('wp')) {
+			return array('success' => false, 'message' => 'skip_missing requires a frontend page context. Omit it to list configured languages.');
+		}
+		$languages = $skip_missing ? mcp_wpml_get_active_languages(true) : mcp_wpml_configured_languages();
 		$rows = array();
 
 		foreach ($languages as $code => $language) {
@@ -95,6 +98,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		if (!$post) {
 			return array('success' => false, 'message' => 'Element not found.');
 		}
+		if (!current_user_can('read_post', $id)) {
+			return array('success' => false, 'message' => 'You cannot read this post.');
+		}
 
 		$element_type = mcp_wpml_element_type_for_post_type((string) $post->post_type);
 		$details = mcp_wpml_lang_details($id, (string) $post->post_type);
@@ -171,6 +177,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		if (!$post) {
 			return array('success' => false, 'message' => 'Post not found.');
 		}
+		if (!current_user_can('read_post', $id)) {
+			return array('success' => false, 'message' => 'You cannot read this post.');
+		}
 
 		$post_type = (string) $post->post_type;
 		$element_type = mcp_wpml_element_type_for_post_type($post_type);
@@ -205,6 +214,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 				? (string) $translation->language_code
 				: (string) $language_code;
 			$translation_post = $translation_id > 0 ? get_post($translation_id) : null;
+			if ($translation_post && !current_user_can('read_post', $translation_id)) {
+				return array('success' => false, 'message' => 'You cannot read every post in this translation group.');
+			}
 			$translation_status = $translation_post ? (string) $translation_post->post_status : '';
 			$row = array(
 				'language_code' => $language_code,
@@ -227,7 +239,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		}
 
 		if ($include_missing) {
-			foreach (mcp_wpml_get_active_languages(false) as $language_code => $language) {
+			foreach (mcp_wpml_configured_languages() as $language_code => $language) {
 				if (!is_array($language)) {
 					continue;
 				}
@@ -535,7 +547,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		}
 
 		if ($include_missing) {
-			foreach (mcp_wpml_get_active_languages(false) as $language_code => $language) {
+			foreach (mcp_wpml_configured_languages() as $language_code => $language) {
 				if (!is_array($language)) {
 					continue;
 				}
@@ -655,6 +667,10 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		if (!post_type_exists($post_type)) {
 			return array('success' => false, 'message' => 'Invalid post_type.');
 		}
+		$type_object = get_post_type_object($post_type);
+		$include_totals = $include_totals && $type_object
+			&& current_user_can($type_object->cap->edit_others_posts)
+			&& current_user_can($type_object->cap->read_private_posts);
 		if (empty($statuses) || in_array('any', $statuses, true)) {
 			$statuses = array('publish', 'draft', 'pending', 'private', 'future');
 		}
@@ -672,6 +688,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		$args = array(
 			'post_type' => $post_type,
 			'post_status' => $statuses,
+			'perm' => 'readable',
 			'posts_per_page' => $per_page,
 			'paged' => $page,
 			'orderby' => $orderby,
@@ -696,7 +713,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 			$posts = array();
 
 			foreach ($query->posts as $post) {
-				if (!$post instanceof WP_Post) {
+				if (!$post instanceof WP_Post || !current_user_can('read_post', (int) $post->ID)) {
 					continue;
 				}
 
@@ -722,7 +739,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 			$total_pages = $include_totals ? (int) $query->max_num_pages : null;
 			$has_more = $include_totals
 				? $page < (int) $query->max_num_pages
-				: $returned === $per_page;
+				: count($query->posts) === $per_page;
 
 			return array(
 				'posts' => $posts,
@@ -823,6 +840,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		if (!$source) {
 			return array('success' => false, 'message' => 'Source post not found.');
 		}
+		if (!current_user_can('read_post', $source_id)) {
+			return array('success' => false, 'message' => 'You cannot read this source post.');
+		}
 
 		$post_type = isset($input['post_type']) && '' !== (string) $input['post_type']
 			? sanitize_key((string) $input['post_type'])
@@ -837,6 +857,9 @@ function mcp_wpml_register_translation_query_abilities(): void {
 		$source_details = mcp_wpml_lang_details($source_id, (string) $source->post_type);
 		$source_trid = $source_details && !empty($source_details->trid) ? (int) $source_details->trid : 0;
 		$existing_target_id = mcp_wpml_target_id_for_post_type($source_id, (string) $source->post_type, $target_lang);
+		if ($existing_target_id > 0 && !current_user_can('read_post', $existing_target_id)) {
+			return array('success' => false, 'message' => 'You cannot read the existing translation.');
+		}
 		$candidate_ids = $existing_target_id > 0 ? array($existing_target_id) : array();
 		$query_args = array(
 			'post_type' => $post_type,
@@ -877,7 +900,7 @@ function mcp_wpml_register_translation_query_abilities(): void {
 			}
 
 			$candidate = get_post($candidate_id);
-			if (!$candidate) {
+			if (!$candidate || !current_user_can('read_post', $candidate_id)) {
 				continue;
 			}
 

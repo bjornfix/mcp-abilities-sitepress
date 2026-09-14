@@ -31,6 +31,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 		}
 
 		if ($page_id > 0 && '' !== $element_id) {
+			if (!current_user_can('edit_post', $page_id)) {
+				return array('success' => false, 'message' => 'You cannot inspect this page.');
+			}
 			$raw = get_post_meta($page_id, '_elementor_data', true);
 			$data = is_string($raw) && '' !== $raw ? json_decode($raw, true) : array();
 			if (!is_array($data)) {
@@ -85,6 +88,10 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 				continue;
 			}
 
+			if (!current_user_can('edit_post', $attachment_id)) {
+				$items[] = array('id' => $attachment_id, 'success' => false, 'message' => 'You cannot edit this attachment.');
+				continue;
+			}
 			$before = mcp_wpml_attachment_size_file_exists($attachment_id, $size);
 			$file = get_attached_file($attachment_id);
 			if (!is_string($file) || '' === $file || !file_exists($file)) {
@@ -248,7 +255,7 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 					foreach ($query->posts as $post_id) {
 						$post_id = (int) $post_id;
 						$post = get_post($post_id);
-						if (!$post) {
+						if (!$post || !current_user_can('read_post', $post_id)) {
 							continue;
 						}
 						$details = mcp_wpml_lang_details($post_id, (string) $post->post_type);
@@ -310,6 +317,10 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 				continue;
 			}
 
+			if (!current_user_can('edit_post', $attachment_id)) {
+				$failed[] = array('id' => $attachment_id, 'message' => 'You cannot inspect or edit this attachment.');
+				continue;
+			}
 			$before = mcp_wpml_attachment_size_file_exists($attachment_id, $size);
 			$after = $before;
 			$regenerated = false;
@@ -346,6 +357,9 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WPML media translation lookup.
 				$translated = apply_filters('wpml_object_id', $attachment_id, 'attachment', false, $source_language);
 				$source_id = is_numeric($translated) ? (int) $translated : 0;
+				if ($source_id > 0 && !current_user_can('read_post', $source_id)) {
+					$source_id = 0;
+				}
 			}
 
 			$item = array(
@@ -468,6 +482,10 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 				continue;
 			}
 			$postarr = array('ID' => $id);
+			if (!current_user_can('edit_post', $id)) {
+				$items[] = array('id' => $id, 'success' => false, 'message' => 'You cannot edit this attachment.');
+				continue;
+			}
 			if (isset($update['title'])) {
 				$postarr['post_title'] = sanitize_text_field((string) $update['title']);
 			}

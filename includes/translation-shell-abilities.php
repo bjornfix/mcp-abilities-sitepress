@@ -28,6 +28,7 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 	$q = new WP_Query(
 			array(
 				'post_type'           => 'page',
+				'perm'                => 'readable',
 				'post_status'         => mcp_wpml_status_filter($status),
 				'posts_per_page'      => $per_page,
 				'paged'               => $page,
@@ -42,7 +43,13 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 	$rows = array();
 		foreach ($q->posts as $post) {
 			$source_id = (int) $post->ID;
+			if (!current_user_can('read_post', $source_id)) {
+				continue;
+			}
 			$target_id = mcp_wpml_target_id($source_id, $target_lang);
+			if ($target_id > 0 && !current_user_can('read_post', $target_id)) {
+				continue;
+			}
 			$rows[] = array(
 				'source_id'       => $source_id,
 				'source_title'    => (string) get_the_title($source_id),
@@ -62,8 +69,8 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 			'source_lang' => $source_lang,
 			'target_lang' => $target_lang,
 			'pages'       => $rows,
-			'total'       => (int) $q->found_posts,
-			'total_pages' => (int) $q->max_num_pages,
+			'total'       => current_user_can('edit_others_pages') && current_user_can('read_private_pages') ? (int) $q->found_posts : null,
+			'total_pages' => current_user_can('edit_others_pages') && current_user_can('read_private_pages') ? (int) $q->max_num_pages : null,
 		);
 	};
 
@@ -93,8 +100,8 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 						'source_lang' => array('type' => 'string'),
 						'target_lang' => array('type' => 'string'),
 						'pages'       => array('type' => 'array'),
-						'total'       => array('type' => 'integer'),
-						'total_pages' => array('type' => 'integer'),
+						'total'       => array('type' => array('integer', 'null')),
+						'total_pages' => array('type' => array('integer', 'null')),
 					),
 				),
 				'execute_callback' => $list_page_translation_status,
@@ -148,13 +155,25 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 			return array('success' => false, 'message' => 'Source post type does not exist.', 'post_type' => $post_type);
 		}
 
+		if (!current_user_can('edit_post', $source_id)) {
+			return array('success' => false, 'message' => 'You cannot use this source post.');
+		}
 	$details = mcp_wpml_lang_details($source_id, $post_type);
 		if (!$details || empty($details->trid) || empty($details->language_code)) {
 			return array('success' => false, 'message' => 'Could not read source WPML language details.');
 		}
 
 	$target_id = mcp_wpml_target_id_for_post_type($source_id, $post_type, $target_lang);
+		if ((string) $details->language_code === $target_lang) {
+			return array('success' => false, 'message' => 'Target language must differ from the source language.');
+		}
+		if (!array_key_exists($target_lang, mcp_wpml_configured_languages())) {
+			return array('success' => false, 'message' => 'Target language is not active in WPML.');
+		}
 		if ($target_id > 0 && $target_id !== $source_id) {
+			if (!current_user_can('read_post', $target_id)) {
+				return array('success' => false, 'message' => 'You cannot read the existing translation.');
+			}
 			return array(
 				'success'       => true,
 				'created'       => false,
@@ -169,21 +188,27 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 		}
 
 	$post_type_object = get_post_type_object($post_type);
+		if (!$post_type_object || !current_user_can($post_type_object->cap->create_posts)) {
+			return array('success' => false, 'message' => 'You cannot create posts of this type.');
+		}
+		if (in_array($target_status, array('publish', 'private'), true) && !current_user_can($post_type_object->cap->publish_posts)) {
+			return array('success' => false, 'message' => 'You cannot publish posts of this type.');
+		}
 	$parent_target = 0;
 		if ($post_type_object && !empty($post_type_object->hierarchical) && (int) $source->post_parent > 0) {
 			$parent_target = mcp_wpml_target_id_for_post_type((int) $source->post_parent, $post_type, $target_lang);
 		}
 
 	$new_id = wp_insert_post(
-			array(
+			wp_slash(array(
 				'post_type'    => $post_type,
-				'post_status'  => $target_status,
+				'post_status'  => 'draft',
 				'post_title'   => (string) $source->post_title,
 				'post_content' => $copy_content ? (string) $source->post_content : '',
 				'post_excerpt' => $copy_excerpt ? (string) $source->post_excerpt : '',
 				'post_parent'  => $parent_target,
 				'menu_order'   => (int) $source->menu_order,
-			),
+			)),
 			true
 		);
 		if (is_wp_error($new_id)) {
@@ -201,10 +226,16 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 				'element_type'         => $element_type,
 				'trid'                 => (int) $details->trid,
 				'language_code'        => $target_lang,
-				'source_language_code' => (string) $details->language_code,
+				'source_language_code' => !empty($details->source_language_code) ? (string) $details->source_language_code : (string) $details->language_code,
 				'check_duplicates'     => false,
 			)
 		);
+
+		clean_post_cache($new_id);
+		$linked = mcp_wpml_lang_details($new_id, $post_type);
+		if (!$linked || (int) $linked->trid !== (int) $details->trid || (string) $linked->language_code !== $target_lang) {
+			return array('success' => false, 'created' => true, 'target_id' => $new_id, 'target_status' => 'draft', 'message' => 'WPML did not persist the translation link. The new post remains a draft.');
+		}
 
 	$copied_meta = array();
 		if ($copy_elementor) {
@@ -229,6 +260,12 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 	$copied_taxonomies = array();
 		if ($copy_taxonomies) {
 			$copied_taxonomies = mcp_wpml_copy_object_terms($source_id, $new_id, $post_type, $target_lang);
+		}
+		if ('draft' !== $target_status) {
+			$status_result = wp_update_post(array('ID' => $new_id, 'post_status' => $target_status), true);
+			if (is_wp_error($status_result)) {
+				return array('success' => false, 'created' => true, 'target_id' => $new_id, 'message' => $status_result->get_error_message());
+			}
 		}
 
 		clean_post_cache($source_id);
@@ -325,13 +362,26 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 			? trim(sanitize_text_field((string) $input['permalink_manager_uri']), " \t\n\r\0\x0B/")
 			: '';
 
-		if ('' === $slug && empty($category_ids) && $primary_category_id <= 0) {
-			return array('success' => false, 'message' => 'Provide slug, category_ids, or primary_category_id.');
+		if ('' === $slug && empty($category_ids) && $primary_category_id <= 0 && '' === $permalink_manager_uri) {
+			return array('success' => false, 'message' => 'Provide slug, category_ids, primary_category_id, or permalink_manager_uri.');
+		}
+
+		if ('' !== $permalink_manager_uri && (!is_callable(array('Permalink_Manager_URI_Functions', 'save_single_uri')) || !is_callable(array('Permalink_Manager_URI_Functions_Post', 'get_post_uri')))) {
+			return array('success' => false, 'message' => 'Permalink Manager must expose its native URI operations.');
 		}
 
 	$post = get_post($post_id);
 		if (!$post) {
 			return array('success' => false, 'message' => 'Post not found.');
+		}
+		if (!current_user_can('edit_post', $post_id)) {
+			return array('success' => false, 'message' => 'You cannot edit this post.');
+		}
+		if (!empty($category_ids) || $primary_category_id > 0) {
+			$taxonomy = get_taxonomy('category');
+			if (!$taxonomy || !current_user_can($taxonomy->cap->assign_terms)) {
+				return array('success' => false, 'message' => 'You cannot assign categories.');
+			}
 		}
 
 	$post_type = (string) $post->post_type;
@@ -355,8 +405,6 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 		}
 
 	$result = mcp_wpml_with_language($target_lang, static function () use ($post_id, $post_type, $slug, $category_ids, $primary_category_id, $permalink_manager_uri): array {
-			global $wpdb;
-
 			$before = get_post($post_id);
 			$before_link = (string) get_permalink($post_id);
 			$before_slug = $before ? (string) $before->post_name : '';
@@ -373,60 +421,41 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 				}
 			}
 
-			if ('' !== $slug) {
-				$after_update = get_post($post_id);
-				if ($after_update && (string) $after_update->post_name !== $slug) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Fallback for preserving an explicit translated slug when core filters override wp_update_post().
-					$wpdb->update(
-						$wpdb->posts,
-						array('post_name' => $slug),
-						array('ID' => $post_id),
-						array('%s'),
-						array('%d')
-					);
-				}
-				delete_post_meta($post_id, '_wp_old_slug');
-			}
-
 			if (!empty($category_ids) && 'post' === $post_type) {
-				wp_set_post_categories($post_id, $category_ids, false);
+				$assigned = wp_set_post_categories($post_id, $category_ids, false);
+				if (is_wp_error($assigned)) {
+					return array('success' => false, 'message' => $assigned->get_error_message());
+				}
 			}
 
 			if ($primary_category_id > 0 && 'post' === $post_type) {
 				if (!mcp_wpml_post_has_term($post_id, $primary_category_id, 'category')) {
-					wp_set_object_terms($post_id, array($primary_category_id), 'category', true);
+					$assigned = wp_set_object_terms($post_id, array($primary_category_id), 'category', true);
+					if (is_wp_error($assigned)) {
+						return array('success' => false, 'message' => $assigned->get_error_message());
+					}
 				}
 				update_post_meta($post_id, '_yoast_wpseo_primary_category', (string) $primary_category_id);
 				update_post_meta($post_id, 'rank_math_primary_category', (string) $primary_category_id);
 			}
 
 			$pm_uri = $permalink_manager_uri;
-			if ('' === $pm_uri && '' !== $slug && 'post' === $post_type) {
-				$category = null;
-				if ($primary_category_id > 0) {
-					$category = get_term($primary_category_id, 'category');
-				}
-				if ((!$category || is_wp_error($category)) && !empty($category_ids)) {
-					$category = get_term((int) $category_ids[0], 'category');
-				}
-				if ($category && !is_wp_error($category) && !empty($category->slug)) {
-					$pm_uri = trim((string) $category->slug, '/') . '/' . $slug;
-				}
+			if ('' === $pm_uri && '' !== $slug && 'post' === $post_type
+				&& is_callable(array('Permalink_Manager_URI_Functions_Post', 'get_default_post_uri'))
+				&& is_callable(array('Permalink_Manager_URI_Functions_Post', 'get_post_uri'))
+				&& is_callable(array('Permalink_Manager_URI_Functions', 'save_single_uri'))) {
+				$pm_uri = (string) Permalink_Manager_URI_Functions_Post::get_default_post_uri($post_id);
 			}
 			if ('' !== $pm_uri) {
-				$uris = get_option('permalink-manager-uris', array());
-				if (is_array($uris)) {
-					$uris[(string) $post_id] = $pm_uri;
-					update_option('permalink-manager-uris', $uris, false);
+				Permalink_Manager_URI_Functions::save_single_uri($post_id, $pm_uri, false, true);
+				$stored_uri = (string) Permalink_Manager_URI_Functions_Post::get_post_uri($post_id);
+				if (trim($stored_uri, '/') !== trim($pm_uri, '/')) {
+					return array('success' => false, 'message' => 'Permalink Manager did not persist the requested URI.');
 				}
+				$pm_uri = $stored_uri;
 			}
 
 			clean_post_cache($post_id);
-			if (function_exists('wp_cache_flush')) {
-				wp_cache_flush();
-			}
-			flush_rewrite_rules(false);
-
 			$after = get_post($post_id);
 			$terms = 'post' === $post_type ? wp_get_post_categories($post_id, array('fields' => 'all')) : array();
 			$categories = array();
@@ -550,10 +579,12 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 	$issues = array();
 	$scanned = 0;
 	$fixed_posts = array();
-	$expected_trustpilot_locale = 'en' === $target_lang ? 'en-US' : '';
 
 		foreach ($posts as $post) {
 			$post_id = (int) $post->ID;
+			if (!current_user_can($fix ? 'edit_post' : 'read_post', $post_id)) {
+				continue;
+			}
 			$post_type = (string) $post->post_type;
 			$details = mcp_wpml_lang_details($post_id, $post_type);
 			if (!$details || (string) $details->language_code !== $target_lang) {
@@ -571,6 +602,10 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 
 			$scanned++;
 			$changed = false;
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+			$language_details = apply_filters('wpml_post_language_details', null, $post_id);
+			$locale = is_array($language_details) ? (string) ($language_details['locale'] ?? '') : '';
+			$expected_trustpilot_locale = preg_match('/^[a-z]{2,3}[_-][A-Z]{2}$/', $locale) ? str_replace('_', '-', $locale) : '';
 
 			$walk = function (&$nodes, array $path = array()) use (&$walk, &$issues, &$changed, $fix, $post_id, $post_type, $target_lang, $expected_trustpilot_locale): void {
 				if (!is_array($nodes)) {
@@ -623,7 +658,6 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 								);
 								if ($fix) {
 									$value = preg_replace('/data-locale="[^"]+"/', 'data-locale="' . $expected_trustpilot_locale . '"', $value);
-									$value = preg_replace('#https://[a-z]{2}(?:-[a-z]{2})?\.trustpilot\.com/#i', 'https://www.trustpilot.com/', (string) $value);
 									$node['settings'][$key] = $value;
 									$changed = true;
 								}
@@ -717,91 +751,16 @@ function mcp_wpml_register_translation_shell_abilities(): void {
 		)
 	);
 
-	$ensure_page_translation = function ($input = array()): array {
-	$input = is_array($input) ? $input : array();
-
-		if (empty($input['source_id'])) {
-			return array('success' => false, 'message' => 'source_id is required.');
-		}
-	$source_id      = (int) $input['source_id'];
-	$target_lang    = isset($input['target_lang']) ? (string) $input['target_lang'] : 'en';
-	$target_status  = isset($input['target_status']) ? (string) $input['target_status'] : 'draft';
-	$copy_content   = !array_key_exists('copy_content', $input) || (bool) $input['copy_content'];
-	$copy_excerpt   = !array_key_exists('copy_excerpt', $input) || (bool) $input['copy_excerpt'];
-	$copy_elementor = !array_key_exists('copy_elementor', $input) || (bool) $input['copy_elementor'];
-
-	$source = get_post($source_id);
+	$ensure_page_translation = function ($input = array()) use ($ensure_post_translation): array {
+		$input = is_array($input) ? $input : array();
+		$source = get_post(isset($input['source_id']) ? (int) $input['source_id'] : 0);
 		if (!$source || 'page' !== $source->post_type) {
 			return array('success' => false, 'message' => 'Source page not found.');
 		}
-
-	$details = mcp_wpml_lang_details($source_id);
-		if (!$details || empty($details->trid) || empty($details->language_code)) {
-			return array('success' => false, 'message' => 'Could not read source WPML language details.');
-		}
-
-	$target_id = mcp_wpml_target_id($source_id, $target_lang);
-		if ($target_id > 0) {
-			return array(
-				'success'       => true,
-				'created'       => false,
-				'source_id'     => $source_id,
-				'target_id'     => $target_id,
-				'target_lang'   => $target_lang,
-				'target_status' => (string) get_post_status($target_id),
-				'target_link'   => (string) get_permalink($target_id),
-				'message'       => 'Translation already exists.',
-			);
-		}
-
-	$parent_target = 0;
-		if ((int) $source->post_parent > 0) {
-			$parent_target = mcp_wpml_target_id((int) $source->post_parent, $target_lang);
-		}
-
-	$new_id = wp_insert_post(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => $target_status,
-				'post_title'   => (string) $source->post_title,
-				'post_content' => $copy_content ? (string) $source->post_content : '',
-				'post_excerpt' => $copy_excerpt ? (string) $source->post_excerpt : '',
-				'post_parent'  => $parent_target,
-			),
-			true
-		);
-		if (is_wp_error($new_id)) {
-			return array('success' => false, 'message' => $new_id->get_error_message());
-		}
-
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
-		do_action(
-			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
-			'wpml_set_element_language_details',
-			array(
-				'element_id'           => (int) $new_id,
-				'element_type'         => 'post_page',
-				'trid'                 => (int) $details->trid,
-				'language_code'        => $target_lang,
-				'source_language_code' => (string) $details->language_code,
-				'check_duplicates'     => false,
-			)
-		);
-
-		if ($copy_elementor) {
-			mcp_wpml_copy_elementor_meta($source_id, (int) $new_id);
-		}
-
-		return array(
-			'success'       => true,
-			'created'       => true,
-			'source_id'     => $source_id,
-			'target_id'     => (int) $new_id,
-			'target_lang'   => $target_lang,
-			'target_status' => (string) get_post_status((int) $new_id),
-			'target_link'   => (string) get_permalink((int) $new_id),
-			'message'       => 'Translation created and linked.',
-		);
+		$input['copy_featured_image'] = false;
+		$input['copy_taxonomies'] = false;
+		$input['copy_selected_meta'] = false;
+		return $ensure_post_translation($input);
 	};
 
 	wp_register_ability(

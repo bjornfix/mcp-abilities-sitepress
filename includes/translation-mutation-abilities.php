@@ -26,6 +26,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		if (!$post) {
 			return array('success' => false, 'message' => 'Post not found.');
 		}
+		if (!current_user_can('edit_post', $id)) {
+			return array('success' => false, 'message' => 'You cannot edit this post.');
+		}
 
 		$post_type = (string) $post->post_type;
 		if (in_array($post_type, array('revision', 'nav_menu_item'), true)) {
@@ -35,6 +38,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		$element_type = mcp_wpml_element_type_for_post_type($post_type);
 		$existing     = mcp_wpml_lang_details($id, $post_type);
 		if ($existing && !empty($existing->trid) && !empty($existing->language_code)) {
+			if ((string) $existing->language_code !== $lang || (!empty($input['trid']) && (int) $existing->trid !== (int) $input['trid'])) {
+				return array('success' => false, 'message' => 'Post already has different WPML language details.');
+			}
 			return array(
 				'success'              => true,
 				'created'              => false,
@@ -48,23 +54,48 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 			);
 		}
 
+		$languages = mcp_wpml_configured_languages();
+		if (!array_key_exists($lang, $languages) || ('' !== $source_lang && !array_key_exists($source_lang, $languages))) {
+			return array('success' => false, 'message' => 'Language is not active in WPML.');
+		}
+		$trid = !empty($input['trid']) ? (int) $input['trid'] : false;
+		if (false !== $trid) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+			$translations = apply_filters('wpml_get_element_translations', null, $trid, $element_type);
+			if (!is_array($translations) || empty($translations)) {
+				return array('success' => false, 'message' => 'Translation group was not found.');
+			}
+			$original_lang = '';
+			foreach ($translations as $translation) {
+				if ((string) $translation->language_code === $lang && (int) $translation->element_id !== $id) {
+					return array('success' => false, 'message' => 'Translation group already contains this language.');
+				}
+				if (!empty($translation->original)) {
+					$original_lang = (string) $translation->language_code;
+				}
+			}
+			if ('' === $original_lang || $source_lang !== $original_lang || $source_lang === $lang) {
+				return array('success' => false, 'message' => 'source_language_code must match the original language of the group.');
+			}
+		} elseif ('' !== $source_lang) {
+			return array('success' => false, 'message' => 'A translation requires an existing trid. Omit source_language_code for a new original.');
+		}
+
 		$details = array(
 			'element_id'           => $id,
 			'element_type'         => $element_type,
+			'trid'                 => $trid,
 			'language_code'        => $lang,
-			'source_language_code' => $source_lang,
+			'source_language_code' => '' !== $source_lang ? $source_lang : null,
 			'check_duplicates'     => false,
 		);
-		if (!empty($input['trid'])) {
-			$details['trid'] = (int) $input['trid'];
-		}
 
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 		do_action('wpml_set_element_language_details', $details);
 
 		clean_post_cache($id);
 		$updated = mcp_wpml_lang_details($id, $post_type);
-		if (!$updated || empty($updated->trid) || empty($updated->language_code)) {
+		if (!$updated || empty($updated->trid) || (string) $updated->language_code !== $lang || (false !== $trid && (int) $updated->trid !== $trid)) {
 			return array('success' => false, 'message' => 'WPML language details were not created.', 'post_type' => $post_type);
 		}
 
@@ -141,6 +172,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		if (!$source || !$target) {
 			return array('success' => false, 'message' => 'Source or target post not found.');
 		}
+		if (!current_user_can('edit_post', $source_id) || !current_user_can('edit_post', $target_id)) {
+			return array('success' => false, 'message' => 'You must be able to edit both posts.');
+		}
 		if ((string) $source->post_type !== (string) $target->post_type) {
 			return array(
 				'success' => false,
@@ -156,6 +190,33 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		if (!$source_details || empty($source_details->trid) || empty($source_details->language_code)) {
 			return array('success' => false, 'message' => 'Could not read source WPML language details.');
 		}
+		if ($source_id === $target_id || $target_lang === (string) $source_details->language_code) {
+			return array('success' => false, 'message' => 'Source and target must be different posts in different languages.');
+		}
+		if (!array_key_exists($target_lang, mcp_wpml_configured_languages())) {
+			return array('success' => false, 'message' => 'Target language is not active in WPML.');
+		}
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+		$translations = apply_filters('wpml_get_element_translations', null, (int) $source_details->trid, $element_type);
+		if (!is_array($translations)) {
+			return array('success' => false, 'message' => 'Could not read the source translation group.');
+		}
+		foreach ($translations as $translation) {
+			if ((string) $translation->language_code === $target_lang && (int) $translation->element_id !== $target_id) {
+				return array('success' => false, 'message' => 'The source already has a different translation in the target language.');
+			}
+		}
+		$target_details = mcp_wpml_lang_details($target_id, $post_type);
+		if ($target_details && (int) $target_details->trid === (int) $source_details->trid && (string) $target_details->language_code === $target_lang) {
+			return array('success' => true, 'source_id' => $source_id, 'target_id' => $target_id, 'trid' => (int) $source_details->trid, 'target_lang' => $target_lang, 'message' => 'Post is already linked in the requested language.');
+		}
+		if ($target_details && !empty($target_details->trid) && (int) $target_details->trid !== (int) $source_details->trid) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
+			$target_group = apply_filters('wpml_get_element_translations', null, (int) $target_details->trid, $element_type);
+			if (!is_array($target_group) || count($target_group) > 1) {
+				return array('success' => false, 'message' => 'Target belongs to another translation group.');
+			}
+		}
 
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
 		do_action(
@@ -166,7 +227,7 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 				'element_type'         => $element_type,
 				'trid'                 => (int) $source_details->trid,
 				'language_code'        => $target_lang,
-				'source_language_code' => (string) $source_details->language_code,
+				'source_language_code' => !empty($source_details->source_language_code) ? (string) $source_details->source_language_code : (string) $source_details->language_code,
 				'check_duplicates'     => false,
 			)
 		);
@@ -174,6 +235,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		clean_post_cache($source_id);
 		clean_post_cache($target_id);
 		$target_details = mcp_wpml_lang_details($target_id, $post_type);
+		if (!$target_details || (int) $target_details->trid !== (int) $source_details->trid || (string) $target_details->language_code !== $target_lang) {
+			return array('success' => false, 'message' => 'WPML did not persist the requested translation link.');
+		}
 
 		return array(
 			'success' => true,
@@ -256,23 +320,35 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 			);
 		}
 
+		if (!current_user_can('edit_post', $target_id)) {
+			return array('success' => false, 'message' => 'You cannot edit this form.');
+		}
+		if (!class_exists('WPCF7_ContactForm')) {
+			return array('success' => false, 'message' => 'Contact Form 7 must be active.');
+		}
+		$contact_form = WPCF7_ContactForm::get_instance($target_id);
+		if (!$contact_form) {
+			return array('success' => false, 'message' => 'Contact Form 7 could not load this form.');
+		}
+		if ('' !== $locale && !wpcf7_is_valid_locale($locale)) {
+			return array('success' => false, 'message' => 'Contact Form 7 does not accept this locale.');
+		}
+
 		$updated = array();
-		update_post_meta($target_id, '_form', wp_kses_post($form));
+		$contact_form->set_properties(array('form' => wp_kses_post($form)));
 		$updated[] = '_form';
 
 		if ('' !== $locale) {
-			update_post_meta($target_id, '_locale', $locale);
+			$contact_form->set_locale($locale);
 			$updated[] = '_locale';
 		}
 
-		if ('' !== $title && $title !== (string) $post->post_title) {
-			wp_update_post(
-				array(
-					'ID' => $target_id,
-					'post_title' => $title,
-				)
-			);
+		if ('' !== $title) {
+			$contact_form->set_title($title);
 			$updated[] = 'post_title';
+		}
+		if ((int) $contact_form->save() !== $target_id) {
+			return array('success' => false, 'message' => 'Contact Form 7 could not save the form.');
 		}
 
 		clean_post_cache($target_id);

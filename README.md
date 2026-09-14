@@ -1,480 +1,174 @@
 # MCP Abilities - SitePress
 
-WPML translation mapping and translation-shell helper abilities for MCP.
+Find missing WPML translations, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.49](https://img.shields.io/badge/release-0.3.49-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
-[![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
-[![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
+[![Release 0.3.50](https://img.shields.io/badge/release-0.3.50-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
+[![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Tested up to:** 7.0
-**Stable tag:** 0.3.49
-**License:** GPLv2 or later
-**License URI:** https://www.gnu.org/licenses/gpl-2.0.html
+**Stable tag:** 0.3.50 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+
+**Tags:** mcp, wpml, translation, ai, automation
 
 ## What It Does
 
-WPML translation mapping and translation-shell helper abilities for MCP.
+The plugin exposes 29 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
 
-This plugin is part of the Devenia MCP abilities ecosystem. It gives an MCP-capable agent a focused, authenticated way to work with SitePress work inside WordPress through MCP.
+It can identify a translated service page that still links to the original contact page, show the linked replacement, and apply that replacement when requested. It can also distinguish a missing translation from an existing draft that can be reused.
 
-It also provides `[mcp_wpml_language_flag]`, a frontend shortcode that renders a linked flag for another active WPML language using WPML language data.
-
-## Reader workflows
-
-The 29 registered abilities form seven reader workflows:
-
-- Translation discovery and status (8): list active languages, language-scoped posts and terms, page translation status, post and term translation groups, element language details, and reusable translation candidates.
-- Translation creation and mapping (5): create missing page or post translation shells, register language details, link an existing translation, and update the translated slug, categories, and primary category in its WPML language context.
-- Link and coverage audits (3): inspect or explicitly fix source-language links, batch the same audit across translated posts, and report missing or stale translations.
-- Language-switcher recovery (5): inspect settings and slots, validate their structure, reset the stored option, and rebuild it through WPML.
-- Translation integrity (2): detect copied source-language text and audit translated content, URLs, galleries, media captions, and frontend gallery assets.
-- Elementor and media maintenance (4): audit or explicitly fix language-specific Elementor assets, audit translated galleries, repair gallery thumbnails and metadata, and update selected media text fields.
-- Optional integration maintenance (2): remove one exact Yoast Premium redirect and update one translated Contact Form 7 form template and locale.
-
-## Authorization and change boundaries
-
-- Every operation requires an authenticated WordPress user. Translation reads and content operations require the relevant page, post, or item editing capability.
-- Language-switcher recovery, translation linking, and exact Yoast redirect removal require `manage_options`. Media changes require `upload_files`, with page editing permission where a gallery page is changed.
-- Link audits and Elementor language-asset audits are read-only unless the caller explicitly enables their `fix` input. Gallery audits repair thumbnails only when the caller explicitly enables repair.
-- Translation creation reuses an existing linked translation instead of creating a duplicate. Targeted mutations require the exact source or target item and language context.
-- Gallery repair can run as a dry run. Existing valid image sizes are regenerated only when the caller explicitly enables `force`.
-- Elementor, Contact Form 7, Yoast Premium, Rank Math, and Trustpilot-specific behavior is used only by the matching targeted operation when that integration is present. The 29 abilities still require WPML as their multilingual state owner.
-
-[Download MCP Abilities - SitePress](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
-
-## Recent Changes
-
-### 0.3.49
-
-- Replaced built-in source-language assumptions with caller-supplied language codes and exact marker lists.
-- Normalized locale-specific Trustpilot hosts without depending on one language.
-
-### 0.3.48
-
-- Aligned the public package author and contributor identity with the Basicus release identity.
-- Documented all 29 registered SitePress abilities in the public inventory.
-
-### 0.3.47
-
-- Improved translation integrity gallery parity so a translated Elementor
-  container background image can satisfy a one-item source media-carousel when
-  both use the same attachment.
-
-### 0.3.46
-
-- Improved translation integrity gallery parity so a translated native Image
-  widget can satisfy a one-item source media-carousel when both use the same
-  attachment.
-
-### 0.3.45
-
-- Improved translation integrity URL checks so shared translated parent slugs
-  are not reported as source-language child URL segments.
-
-### 0.3.44
-
-- Improved translation integrity gallery parity checks so translated Elementor
-  media-carousel widgets with language-specific element IDs can match by
-  attachment signature instead of being reported as missing.
-
-### 0.3.43
-
-- Ignored language-neutral web/platform terms in shared-term translation integrity checks so required privacy-policy terms like Google, Facebook, and cookies do not create false positives.
-
-### 0.3.42
-
-- Added `wpml/update-contact-form-7-translation-form` for safely updating the
-  native Contact Form 7 form template and locale on translated CF7 forms.
-
-### 0.3.41
-
-- Added generic WPML-aware Contact Form 7 shortcode rendering so translated
-  pages can render the translated `wpcf7_contact_form` in the current language
-  when a linked form translation exists.
-
-### 0.3.40
-
-- Added read-only WPML taxonomy term abilities for language-scoped term lists
-  and term translation-group lookup.
-
-### 0.3.39
-
-- Improved translation integrity shared-term detection so shared neutral terms
-  such as `design` and `aluminium` are not reported as untranslated source text.
-
-### 0.3.38
-
-- Improved translation integrity shared-term detection so legitimate shared
-  material names such as `plexiglass` and `lexan` are not reported as
-  untranslated source text.
-
-### 0.3.37
-
-- Improved translation integrity shared-term detection so legitimate shared
-  product and technology terms such as `PRIVA-LITE` and `intelligent` are not
-  reported as untranslated source text.
-
-### 0.3.36
-
-- Improved translation integrity frontend marker defaults so global Trustpilot
-  locale markup is not reported as untranslated page content.
-
-### 0.3.35
-
-- Improved translation integrity shared-term detection so layout terms and
-  domain-neutral glass terminology are ignored instead of being reported as
-  untranslated source text.
-
-### 0.3.34
-
-- Improved translation integrity detection so Elementor global style tokens are
-  ignored instead of being reported as untranslated source text.
-
-### 0.3.33
-
-- Improved `wpml/list-posts` so `lang` works as an alias for `target_lang`,
-  making search queries easier to call consistently from agents.
-
-### 0.3.32
-
-- Added `wpml/list-posts` for language-scoped WPML post/page/CPT queries,
-  including category, status, search, order, pagination, and translation
-  metadata in the result.
-
-### 0.3.31
-
-- Improved the Elementor translation-sibling adapter registration so the WPML
-  provider binds to Elementor's guarded-write seam across normal WordPress load
-  order variations.
-
-### 0.3.30
-
-- Added a WPML translation sibling provider for Elementor guarded writes, so
-  translated Elementor documents can be preserved independently during
-  WPML-linked page updates.
-
-### 0.3.29
-
-- Continued the architecture split by moving translation mutation, link audits, language-switcher recovery, translation shell/integrity checks, and Elementor gallery media abilities into dedicated modules.
-
-### 0.3.28
-
-- Fixed `wpml/find-translation-candidates` to always include the already linked WPML target when one exists, even when the source-language title does not match the translated title.
-
-### 0.3.27
-
-- Added `wpml/find-translation-candidates` to find reusable target-language publish/draft/trash candidates before creating duplicate translations.
-
-### 0.3.26
-
-- Added `wpml/get-post-translations` for read-only WPML translation-group lookup across posts, pages, and custom post types.
-- Started the architecture split by moving read-only language and translation query abilities into a dedicated module.
-
-### 0.3.25
-
-- Added `wpml/set-post-language-details` for registering WPML language details on existing post/CPT items that have no language metadata yet.
-
-**Example:** "Handle this WordPress maintenance task directly." - The agent can inspect the site, call the relevant ability, and return the result without making the human click through wp-admin for every step.
+The plugin does not write translations or judge whether a translated explanation suits its readers. Text comparisons identify material to review; they are not a language-quality score.
 
 ## The Real Workflow
 
-In practice, the human should not have to memorize every ability name.
-
-The normal pattern is:
-
-1. install the base MCP stack
-2. install only the add-ons the site actually needs
-3. let the agent discover the available abilities
-4. give the agent a clear task with boundaries
-5. verify the result in WordPress
-
-The human's job is mostly to describe the goal.
-The agent's job is to figure out the mechanics.
+1. Read the source post's translation group and check coverage for the intended language.
+2. Inspect existing candidates before creating a new shell. A shell copies selected source material into a draft and links it through WPML.
+3. Write and review the translation. Inspect links, Elementor references, and media text for source-language material.
+4. Apply the selected repairs, then check the actual page and language switcher.
 
 ## Why This Feels Different
 
-Most WordPress automation still leaves the repetitive part to the human.
+A language code alone cannot tell you which post should be changed. These abilities expose post IDs, translation groups, language codes, and native URLs together. An assistant can check the relationship before it changes content.
 
-This plugin is different because the agent can act inside the site through a narrow, authenticated ability surface:
-
-- inspect current site state before changing anything
-- run the specific action needed for the task
-- return structured results that are easy to verify
-- keep the workflow inside WordPress instead of a separate checklist
-
-That changes the experience from:
-
-- `Here is what you should do in wp-admin`
-
-to:
-
-- `Tell the agent what needs doing, and let it carry out the work`
+Creation reuses an existing linked translation. Linking rejects an occupied language slot. New shells remain drafts if WPML does not confirm the relationship. URL updates retain WordPress's unique-slug rules and old-slug history.
 
 ## Before vs After
 
-### Before
-
-- ask the AI what to do
-- copy the answer into WordPress by hand
-- click through wp-admin for the repetitive bits
-- postpone maintenance because the task is tedious
-
-### After
-
-- tell the agent what needs doing
-- let it inspect the relevant WordPress state
-- let it run the targeted ability
-- verify the result and move on
+| Job | Manual work | With these abilities |
+| --- | --- | --- |
+| Find gaps | Open source pages and inspect each language | List missing translations and modification-date differences |
+| Reuse a draft | Search titles and inspect language assignments | Compare candidates and the existing translation group |
+| Repair internal links | Read each translated page and follow its links | Inspect proposed replacements, then enable the selected repair |
+| Check translated media | Open galleries and attachment records separately | Inspect gallery use, missing sizes, and caller-specified caption markers |
 
 ## Who It Is For
 
-This is a good fit for:
+Multilingual site editors, agencies maintaining WPML sites, and developers connecting an assistant to existing WordPress operations. Elementor users also get targeted gallery and template-reference checks.
 
-- agencies managing WordPress sites with AI-assisted maintenance
-- operators who want agents to do real WordPress work instead of producing instructions
-- teams already using MCP Expose Abilities
-- sites where this WordPress area is updated often enough to deserve automation
+## Requirements
 
-It is especially useful when the manual version is repetitive enough that important maintenance gets delayed.
+- WordPress 6.9 or newer with its Abilities API, and PHP 8.0 or newer.
+- An active, configured WPML SitePress installation. These abilities are not registered without WPML.
+- An authenticated connection that exposes WordPress abilities to your assistant, such as [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/).
+- The matching plugin for optional operations: Elementor, Contact Form 7, Yoast SEO Premium, or Permalink Manager. These are not translation engines supplied by this plugin.
 
 ## Documentation
 
-Start with the main plugin page and base stack documentation:
-
-- [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/)
-- [Plugin page](https://devenia.com/plugins/mcp-abilities-sitepress/)
-- [Getting Started](https://github.com/bjornfix/mcp-expose-abilities/wiki/Getting-Started)
-- [Install Order and Dependencies](https://github.com/bjornfix/mcp-expose-abilities/wiki/Install-Order-and-Dependencies)
-
-If you are using an AI agent, the simplest instruction is often just:
-
-- `Read https://github.com/bjornfix/mcp-expose-abilities and figure out the stack before making changes.`
+Read the [plugin guide](https://devenia.com/plugins/mcp-abilities-sitepress/), [WPML hooks reference](https://wpml.org/documentation/support/wpml-coding-api/wpml-hooks-reference/), and [WordPress Abilities API documentation](https://developer.wordpress.org/apis/abilities-api/).
 
 ## Start Here
 
-If you are new to the stack, use this order:
+Ask your assistant to inspect a source page's translation group and report which language is missing. Keep the first request read-only. If a target already exists, inspect that post before asking for a new translation shell.
 
-1. Install **Abilities API**.
-2. Install **MCP Adapter**.
-3. Install **MCP Expose Abilities**.
-4. Install **MCP Abilities - SitePress**.
-5. Confirm the new abilities appear in discovery.
-6. Give the agent a clear task that uses this add-on.
+## Complete Ability Inventory
 
-If you skip base-stack verification and start with add-ons immediately, troubleshooting gets harder than it needs to be.
-
-## Abilities (29)
-
-| Ability | Description |
-|---------|-------------|
-| `wpml/list-page-translation-status` | List translation status for source pages and target languages |
-| `wpml/ensure-page-translation` | Create and link a target translation shell for a source page |
-| `wpml/ensure-post-translation` | Create and link a target translation shell for a source post, page, or custom post type |
-| `wpml/update-translated-post-url` | Update translated post slug, categories, and primary category in the target WPML language context |
-| `wpml/audit-elementor-language-assets` | Audit/fix translated Elementor global widget template references and Trustpilot locales |
-| `wpml/detect-untranslated-content` | Detect copied/untranslated source-language fragments in target content |
-| `wpml/list-active-languages` | List active WPML languages with normalized metadata |
-| `wpml/list-posts` | List posts, pages, or custom post types in an explicit WPML language context |
-| `wpml/list-terms` | List taxonomy terms in an explicit WPML language context |
-| `wpml/get-element-language-details` | Read normalized WPML language details for a page/post element |
-| `wpml/get-post-translations` | Read the WPML translation group for a post/page/CPT |
-| `wpml/get-term-translations` | Read the WPML translation group for a taxonomy term |
-| `wpml/find-translation-candidates` | Find reusable target-language translation candidates before creating duplicates |
-| `wpml/set-post-language-details` | Register WPML language details for an existing post/CPT item |
-| `wpml/link-post-translation` | Link an existing post/CPT item as a WPML translation |
-| `wpml/audit-translated-links` | Audit or fix translated content links that still point to source-language originals |
-| `wpml/audit-translated-links-batch` | Batch-audit translated links across translated posts |
-| `wpml/audit-translation-coverage` | Report missing or stale target-language translations |
-| `wpml/get-language-switcher-settings` | Read normalized WPML language-switcher settings and overview |
-| `wpml/list-language-switcher-slots` | Inspect language-switcher slots across statics, menus, and sidebars |
-| `wpml/validate-language-switcher-settings` | Validate WPML language-switcher option structure before changes |
-| `wpml/reset-language-switcher-settings` | Delete switcher settings so WPML can rebuild them |
-| `wpml/rebuild-language-switcher-settings` | Reset and re-read switcher settings through a recovery path |
-| `wpml/audit-translation-integrity` | Audit translated content for source text and source URL segments |
-| `wpml/remove-yoast-redirect` | Remove an exact Yoast Premium redirect |
-| `wpml/repair-elementor-gallery-media` | Repair translated Elementor gallery media metadata/files |
-| `wpml/audit-elementor-gallery-media` | Audit translated Elementor galleries and media captions |
-| `wpml/update-media-captions-batch` | Batch update translated media captions |
-| `wpml/update-contact-form-7-translation-form` | Update the native form template and locale for a translated Contact Form 7 form |
+| Ability | Purpose |
+| --- | --- |
+| `wpml/list-active-languages` | List configured languages without needing a frontend query |
+| `wpml/list-posts` | Query posts, pages, or custom post types in a language |
+| `wpml/list-terms` | Query terms in a language |
+| `wpml/get-element-language-details` | Read one post's language and translation-group ID |
+| `wpml/get-post-translations` | Read a post translation group |
+| `wpml/get-term-translations` | Read a term translation group |
+| `wpml/list-page-translation-status` | Compare source pages with one target language |
+| `wpml/find-translation-candidates` | Find existing translated, draft, or unassigned candidates |
+| `wpml/set-post-language-details` | Register missing language details on an existing post |
+| `wpml/link-post-translation` | Link an existing post without replacing an occupied language slot |
+| `wpml/ensure-page-translation` | Reuse or create a linked page shell |
+| `wpml/ensure-post-translation` | Reuse or create a shell for a supported post type |
+| `wpml/update-translated-post-url` | Update the slug, post categories, primary category, or custom URI |
+| `wpml/audit-translated-links` | Inspect or repair internal links in one post |
+| `wpml/audit-translated-links-batch` | Run the same link operation on several posts |
+| `wpml/audit-translation-coverage` | Report missing translations and modification-date differences |
+| `wpml/detect-untranslated-content` | Compare source and target text for shared terms and segments |
+| `wpml/audit-translation-integrity` | Inspect text, URLs, galleries, and optional frontend markers |
+| `wpml/audit-elementor-language-assets` | Inspect or repair translated template references and Trustpilot locale markup |
+| `wpml/audit-elementor-gallery-media` | Inspect gallery use, media sizes, and caption markers; optionally repair sizes |
+| `wpml/repair-elementor-gallery-media` | Regenerate missing image sizes for selected gallery attachments |
+| `wpml/update-media-captions-batch` | Update selected attachment titles, captions, or descriptions |
+| `wpml/get-language-switcher-settings` | Read the stored language-switcher configuration |
+| `wpml/list-language-switcher-slots` | Inspect menu, sidebar, and static slots |
+| `wpml/validate-language-switcher-settings` | Flag suspicious slot structures |
+| `wpml/reset-language-switcher-settings` | Delete the stored switcher configuration |
+| `wpml/rebuild-language-switcher-settings` | Reset and re-read settings, reporting whether WPML has populated them |
+| `wpml/remove-yoast-redirect` | Delete an exact plain redirect through Yoast SEO Premium |
+| `wpml/update-contact-form-7-translation-form` | Save a translated form template and locale through Contact Form 7 |
 
 ## Usage Examples
 
-### List translation status
+Inspect the group for a source page:
 
 ```json
-{
-  "ability_name": "wpml/list-page-translation-status",
-  "parameters": {
-    "source_lang": "fr",
-    "target_lang": "en",
-    "per_page": 20,
-    "page": 1
-  }
-}
+{"id": 123, "include_missing": true}
 ```
 
-### Ensure translation shell exists
+Use that input with `wpml/get-post-translations`. The IDs below are illustrative; obtain real IDs from your site.
+
+Create or reuse a French draft through `wpml/ensure-post-translation`:
 
 ```json
-{
-  "ability_name": "wpml/ensure-post-translation",
-  "parameters": {
-    "source_id": 123,
-    "target_lang": "en",
-    "target_status": "publish",
-    "copy_elementor": true,
-    "copy_taxonomies": true
-  }
-}
+{"source_id": 123, "target_lang": "fr", "target_status": "draft", "copy_content": true}
 ```
 
-### Detect untranslated content
+Inspect links through `wpml/audit-translated-links`:
 
 ```json
-{
-  "ability_name": "wpml/detect-untranslated-content",
-  "parameters": {
-    "source_id": 123,
-    "target_id": 456,
-    "ignore_terms": ["example-brand", "paris"]
-  }
-}
+{"id": 456, "target_lang": "fr", "fix": false}
 ```
 
-### Audit translation coverage
+After reviewing the proposed replacements, use the same input with `fix: true`. Replacement matches complete URL values, including their HTML and JSON representations.
+
+Check selected gallery images without changing files:
 
 ```json
-{
-  "ability_name": "wpml/audit-translation-coverage",
-  "parameters": {
-    "source_lang": "fr",
-    "target_lang": "en",
-    "post_types": ["page", "post", "elementor_library"],
-    "status": "publish",
-    "include_stale": true
-  }
-}
+{"attachment_ids": [789, 790], "size": "medium", "dry_run": true}
 ```
 
-## Changelog
+Use that input with `wpml/repair-elementor-gallery-media`.
 
-### 0.3.24
+### Frontend integration
 
-- Cleared Plugin Check warnings for the public language-flag shortcode release.
+The `[mcp_wpml_language_flag]` shortcode renders a linked flag from WPML language data. The plugin also maps linked Contact Form 7 shortcodes to the current language and provides WPML sibling IDs to compatible Elementor editing tools. These features use existing translations.
 
-### 0.3.23
+## Permissions and Limits
 
-- Added a public WPML-powered language flag shortcode for theme/header inserts.
+The ability permission check and the affected post's permission both apply. Administrative recovery and translation linking require `manage_options`; media operations also require media permissions. A connected assistant inherits the WordPress user's access.
 
-### 0.3.22
+Link and Elementor asset audits write only when `fix` is enabled. Gallery audits regenerate sizes only when repair is enabled. Switcher reset deletes custom configuration: inspect it first. Its legacy rebuild operation reports a reset, not proof that a rendered switcher works.
 
-- Added Elementor gallery media audit/repair abilities and batch media-caption updates for translated content.
-- Added Yoast redirect removal and expanded translation integrity checks for migrated multilingual pages.
+An integrity result is a review aid. Shared brand names can be correct in both languages; modified dates do not prove that a translation is outdated. Supply relevant source-language markers and review the actual source and target. URL resolution is limited to links WordPress and the site's URL configuration can resolve.
 
-### 0.3.15
+Trustpilot locale checks use the post's configured regional locale. A bare language code does not establish a country. Yoast controls its redirect exports; the deprecated `clean_htaccess` input no longer edits files independently. Custom URIs use Permalink Manager's own functions and permalink formats.
 
-- Added language-aware configured option translations for values such as `blogdescription`, so schema/tagline output can differ per WPML language without changing the default-language option.
-- Extended `wpml/audit-translation-integrity` to report `[insert page='...']` shortcodes that still point at a source-language post/template.
+## Installation
 
-### 0.3.14
+1. Install and configure WPML and your authenticated WordPress ability connection.
+2. [Download the plugin ZIP](https://downloads.devenia.com/mcp-abilities-sitepress.zip).
+3. Upload it through **Plugins → Add New → Upload Plugin**, then activate it.
+4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
-- Added `wpml/audit-translation-integrity` to audit translated posts/pages for untranslated source text, source-language URL segments, and optional rendered frontend markers.
-- Expanded `wpml/detect-untranslated-content` so it works for posts and other post types, not only pages.
+## Recent Changes
 
-### 0.3.13
-- Added `wpml/audit-elementor-language-assets` to detect and optionally fix translated Elementor content that still references source-language global widget templates or wrong Trustpilot locales.
+### 0.3.50
 
-### 0.3.12
-- Extended `wpml/update-translated-post-url` to update Permalink Manager custom URIs so old source-language custom URLs no longer override translated slugs.
+- Added per-post access checks and verification of translation writes.
+- Prevented conflicting language links and kept unlinked shells as drafts.
+- Preserved native slug uniqueness, URL history, and exact URL replacement.
+- Used configured regional locales and native Contact Form 7, Yoast, and Permalink Manager operations.
+- Clarified switcher reset results and completed the public ability inventory.
 
-### 0.3.11
-- Added `wpml/update-translated-post-url` to update translated post slugs, categories, and Yoast/Rank Math primary categories in the correct WPML language context.
-
-### 0.3.10
-- Added `wpml/ensure-post-translation` to create proper WPML-linked translations for pages, posts, and custom post types while copying Elementor data, featured images, selected meta, and translated taxonomy terms where available.
-
-### 0.3.9
-- Added `wpml/audit-translation-coverage` to report published source-language pages, posts, and templates that are missing or older than target-language translations.
-
-### 0.3.8
-- Tightened URL extraction for translated-link audit so unresolved checks do not treat closing tags, shortcode fragments, or prose with slashes as URLs.
-
-### 0.3.7
-- Extended translated-link audit to flag unresolved internal page-like URLs that are not under the target language prefix, so broken/source-language-looking links are visible even when `url_to_postid()` cannot map them to a translated post.
-
-### 0.3.6
-- Added `wpml/audit-translated-links-batch` to scan explicit IDs or all translated posts of a post type for source-language internal links, with optional batch replacement.
-
-### 0.3.5
-- Tightened translated-link audit so URLs already using the target language path prefix, such as `/en/...`, are not flagged as source-language links.
-
-### 0.3.4
-- Added `wpml/audit-translated-links` to detect internal links in translated content/Elementor data that still point to source-language originals, with optional `fix=true` replacement to translated URLs.
-
-### 0.3.3
-- Added `wpml/link-post-translation` for linking existing post/CPT items, including Elementor library templates, as WPML translations.
-- Made element language detail lookup post-type-aware instead of page-only.
-
-### 0.3.2
-- Fixed: removed tracked hidden files from the release package so WP.org Plugin Check passes
-
-### 0.3.1
-- Docs: added explicit WordPress and PHP compatibility notes
-- Docs: corrected the documented ability count to match the current 10 registered abilities
-
-### 0.3.0
-- Added safe WPML administration abilities around active languages and element language details
-- Added language-switcher inspection, slot listing, validation, reset, and rebuild abilities
-- Hardened WPML operational workflow so switcher recovery no longer depends on raw option writes
-
-### 0.2.5
-- Renamed plugin display name to SitePress for trademark-safe naming
-- Removed site-specific wording from documentation
-- Added link to plugin page on devenia.com
-
-### 0.2.4
-- Added output schemas and MCP meta annotations for all abilities
-- Added WP.org `readme.txt` for release parity
-
-### 0.2.2
-- Improved untranslated-content detection tunables
-
-### 0.2.1
-- Added `wpml/detect-untranslated-content`
-
-### 0.2.0
-- Added `wpml/ensure-page-translation`
-
-### 0.1.0
-- Initial release with translation status listing
+Earlier changes are listed in `readme.txt`.
 
 ## Contributing
 
-PRs welcome. Keep changes focused on the plugin's WordPress ability surface and preserve authenticated, explicit workflows.
+Describe the affected ability, plugin versions, input, and observed result. Use a minimal example without credentials or private content. Keep language relationships in WPML and storage operations in their owning WordPress plugins.
 
-## License
+## License and Author
 
-GPL-2.0+
-
-## Author
-
-[Devenia](https://devenia.com) - We've been doing SEO and web development since 1993.
+GPLv2 or later. Author: [basicus](https://profiles.wordpress.org/basicus/).
 
 ## Links
 
-- [Plugin Page](https://devenia.com/plugins/mcp-expose-abilities/#add-ons)
+- [Plugin guide](https://devenia.com/plugins/mcp-abilities-sitepress/)
+- [Download](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 - [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/)
-- [GitHub Releases](https://github.com/bjornfix/mcp-abilities-sitepress/releases)
-
-## Star and Share
-
-If this plugin saves you time or makes WordPress maintenance easier to verify, please:
-
-- star the repo
-- share it with people running WordPress sites
-- point them to the main plugin page so they can see what the ecosystem can actually do
-
-Why do it?
-
-Because agent-friendly open WordPress tooling helps more of the boring but important work get done.

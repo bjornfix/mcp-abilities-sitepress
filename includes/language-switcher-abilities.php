@@ -232,7 +232,10 @@ function mcp_wpml_register_language_switcher_abilities(): void {
 			'success' => true,
 			'overview' => $overview,
 			'settings' => mcp_wpml_normalize_scalar($settings),
-			'message' => 'WPML language switcher settings reset and re-read.',
+			'rebuilt' => !empty($settings),
+			'message' => !empty($settings)
+				? 'WPML language switcher settings reset and re-read.'
+				: 'Settings reset. WPML has not rebuilt them yet; inspect the switcher after the next request.',
 		);
 	};
 
@@ -240,7 +243,7 @@ function mcp_wpml_register_language_switcher_abilities(): void {
 		'wpml/rebuild-language-switcher-settings',
 		array(
 			'label' => 'Rebuild Language Switcher Settings',
-			'description' => 'Deletes and re-reads the WPML language switcher option to force a safe rebuild path.',
+			'description' => 'Resets and re-reads WPML language switcher settings. Reports whether WPML has populated the option; a reset does not prove a rendered switcher was rebuilt.',
 			'category' => 'site',
 			'input_schema' => array(
 				'type' => 'object',
@@ -252,6 +255,7 @@ function mcp_wpml_register_language_switcher_abilities(): void {
 					'success' => array('type' => 'boolean'),
 					'overview' => array('type' => 'object'),
 					'settings' => array('type' => 'object'),
+					'rebuilt' => array('type' => 'boolean'),
 					'message' => array('type' => 'string'),
 				),
 			),

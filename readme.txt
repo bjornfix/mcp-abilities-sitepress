@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.50
+Stable tag: 0.3.51
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -57,12 +57,17 @@ Plugin page: https://devenia.com/plugins/mcp-abilities-sitepress/
 
 == Installation ==
 
+For update notifications in WordPress, install [Devenia MCP Updater](https://downloads.devenia.com/devenia-mcp-updater.zip). The updater is optional. You choose which plugins update automatically through WordPress.
+
 1. Install and activate MCP Expose Abilities
 2. Install and activate WPML
 3. Upload this plugin
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.51 =
+* Add one dismissible Plugins-screen reminder when Devenia MCP Updater is missing or inactive, with persistent install or activate links. Automatic updates remain your choice in WordPress.
 
 = 0.3.50 =
 

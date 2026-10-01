@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com/plugins/mcp-abilities-sitepress/
  * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.51
+ * Version: 0.3.52
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: basicus

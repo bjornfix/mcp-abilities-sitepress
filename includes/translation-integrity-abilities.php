@@ -612,7 +612,7 @@ function mcp_wpml_register_translation_integrity_abilities(): void {
 		if (!$redirect) {
 			return array('success' => true, 'origin' => $origin, 'url' => $url, 'removed' => array('count' => 0), 'message' => 'No redirect exists at this origin.');
 		}
-		if (!is_callable(array($redirect, 'get_url')) || trim((string) $redirect->get_url(), '/') !== $url) {
+		if (!is_callable(array($redirect, 'get_target')) || trim((string) $redirect->get_target(), '/') !== $url) {
 			return array('success' => false, 'message' => 'The redirect destination does not match url.');
 		}
 		if (!$manager->delete_redirects(array($redirect))) {

@@ -15,7 +15,7 @@ class WPSEO_Redirect_Manager {
  public function delete_redirects($redirects) { ++self::$deleted; if (self::$fail) { return false; } self::$redirect = false; return true; }
 }
 class RedirectFixture {
- public function get_url() { return '/new/'; }
+ public function get_target() { return '/new/'; }
 }
 require dirname(__DIR__) . '/includes/translation-integrity-abilities.php';
 mcp_wpml_register_translation_integrity_abilities();

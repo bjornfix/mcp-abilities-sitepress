@@ -406,12 +406,12 @@ function mcp_wpml_cancel_translation_jobs($input = array()) {
 /** Explicit coverage, including functions requiring a secure human workflow. */
 function mcp_wpml_administration_coverage($input = array()): array {
 	$coverage = array(
-		'languages_and_relationships' => array('supported' => array('wpml/list-active-languages', 'wpml/get-post-translations', 'wpml/get-term-translations', 'wpml/link-post-translation', 'wpml/set-post-language-details'), 'missing' => array('Add/remove site languages', 'Term relationship mutation')),
-		'translations_and_strings' => array('supported' => array('wpml/ensure-post-translation', 'wpml/update-translated-post-url', 'wpml/update-contact-form-7-translation-form'), 'missing' => array('String inventory and native string translation updates')),
-		'jobs_and_ate' => array('supported' => array('wpml/list-translation-jobs', 'wpml/preview-translation-job-cancellation', 'wpml/cancel-translation-jobs'), 'missing' => array('Translator assignment and manual job dispatch')),
-		'settings' => array('supported' => array('wpml/get-translation-controls', 'wpml/enable-manual-translation', 'wpml/get-language-switcher-settings'), 'missing' => array('General allowlisted settings administration')),
-		'diagnostics' => array('supported' => array('wpml/audit-translation-integrity', 'wpml/audit-translated-links', 'wpml/audit-translation-coverage'), 'missing' => array('Native WPML troubleshooting actions')),
-		'registration' => array('supported' => array('wpml/get-translation-controls'), 'requires_secure_user_step' => array('WPML registration and site-key replacement', 'New access or account connections'), 'missing' => array('Installer registration status')),
+		'languages_and_relationships' => array('supported' => array('wpml/list-active-languages', 'wpml/get-site-languages', 'wpml/add-site-language', 'wpml/set-active-site-languages', 'wpml/set-default-site-language', 'wpml/get-post-translations', 'wpml/get-term-translations', 'wpml/link-post-translation', 'wpml/set-post-language-details', 'wpml/set-term-language-details', 'wpml/link-term-translation'), 'missing' => array('Delete language content', 'Edit existing language names, flags and display translations', 'Language-pack downloads and native language setup notices')),
+		'translations_and_strings' => array('supported' => array('wpml/ensure-post-translation', 'wpml/update-translated-post-url', 'wpml/update-contact-form-7-translation-form', 'wpml/list-strings', 'wpml/get-string', 'wpml/update-string-translation'), 'missing' => array('Admin-option string values', 'String registration, deletion and catalog import/export', 'Updates to waiting or in-progress/partial string targets')),
+		'jobs_and_ate' => array('supported' => array('wpml/list-translation-jobs', 'wpml/preview-translation-job-cancellation', 'wpml/cancel-translation-jobs', 'wpml/list-local-translators', 'wpml/assign-local-translation-job', 'wpml/create-local-translation-job'), 'missing' => array('Grant translator roles or language pairs', 'External/automatic/ATE dispatch and assignment', 'Resend jobs for an existing target relationship or job history', 'String/package job dispatch', 'Atomic coordination with concurrent native UI edits')),
+		'settings' => array('supported' => array('wpml/get-translation-controls', 'wpml/enable-manual-translation', 'wpml/get-language-switcher-settings', 'wpml/get-general-settings', 'wpml/update-general-settings'), 'missing' => array('Settings outside the synchronization and translated-slug allowlist', 'Raw options, URL domains, access roles and account settings')),
+		'diagnostics' => array('supported' => array('wpml/audit-translation-integrity', 'wpml/audit-translated-links', 'wpml/audit-translation-coverage', 'wpml/get-diagnostics', 'wpml/clear-translation-cache'), 'missing' => array('Full debug dumps and external connectivity probes', 'Database schema repair, destructive reset and orphan-job repair')),
+		'registration' => array('supported' => array('wpml/get-registration-status', 'wpml/get-registration-workflow'), 'requires_secure_user_step' => array('WPML registration and site-key replacement in the native secure form', 'New access or account connections'), 'missing' => array('License validity verification', 'Registration-key input/output, payments and subscriptions')),
 	);
 	return array('success' => true, 'wpml_version' => ICL_SITEPRESS_VERSION,
 		'coverage' => $coverage, 'full_administration_supported' => false,
@@ -429,13 +429,18 @@ function mcp_wpml_register_administration_abilities(): void {
 		'cancel-translation-jobs' => array('Cancel Translation Jobs', 'Cancel only an exact verified preview through native WPML and ATE mechanisms. Requires acknowledgement of lost progress, rejects stale local state and verifies remaining jobs.', 'mcp_wpml_cancel_translation_jobs', array('preview_id' => array('type' => 'string', 'pattern' => '^[a-f0-9-]{36}$'), 'confirm' => array('type' => 'boolean', 'default' => false), 'acknowledge_loss' => array('type' => 'boolean', 'default' => false)), array('preview_id', 'confirm', 'acknowledge_loss'), false, true, true),
 		'get-administration-coverage' => array('Get WPML Administration Coverage', 'List supported, missing and secure-user-step WPML administration functions without returning credentials.', 'mcp_wpml_administration_coverage', array(), array(), true, false, true),
 	);
+	mcp_wpml_register_native_admin_definitions($definitions);
+}
+
+/** Keep schemas and native capability callbacks at the existing ability registration seam. */
+function mcp_wpml_register_native_admin_definitions(array $definitions): void {
 	foreach ($definitions as $slug => $definition) {
 		wp_register_ability('wpml/' . $slug, array(
 			'label' => $definition[0], 'description' => $definition[1],
 			'category' => 'site',
 			'input_schema' => array('type' => 'object', 'properties' => $definition[3], 'required' => $definition[4], 'additionalProperties' => false),
 			'output_schema' => array('type' => 'object'), 'execute_callback' => $definition[2],
-			'permission_callback' => static fn(): bool => current_user_can('manage_options'),
+			'permission_callback' => $definition[8] ?? static fn(): bool => current_user_can('manage_options'),
 			'meta' => array('annotations' => array('readonly' => $definition[5], 'destructive' => $definition[6], 'idempotent' => $definition[7])),
 		));
 	}

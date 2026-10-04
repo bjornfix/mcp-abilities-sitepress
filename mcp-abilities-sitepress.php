@@ -2,8 +2,8 @@
 /**
  * Plugin Name: MCP Abilities - SitePress
  * Plugin URI: https://devenia.com/plugins/mcp-abilities-sitepress/
- * Description: WPML translation mapping and translation-shell helper abilities for MCP.
- * Version: 0.3.53
+ * Description: Native WPML translation, language, string and selected administration abilities for MCP.
+ * Version: 0.3.54
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author: basicus
@@ -31,6 +31,9 @@ require_once __DIR__ . '/includes/translation-shell-abilities.php';
 require_once __DIR__ . '/includes/translation-integrity-abilities.php';
 require_once __DIR__ . '/includes/elementor-media-abilities.php';
 require_once __DIR__ . '/includes/administration-abilities.php';
+require_once __DIR__ . '/includes/site-administration-abilities.php';
+require_once __DIR__ . '/includes/string-administration-abilities.php';
+require_once __DIR__ . '/includes/job-distribution-abilities.php';
 
 function mcp_wpml_ready(): bool {
 	return function_exists('wp_register_ability') && defined('ICL_SITEPRESS_VERSION');
@@ -1477,6 +1480,9 @@ function mcp_wpml_register_abilities(): void {
 	mcp_wpml_register_elementor_media_abilities();
 
 	mcp_wpml_register_administration_abilities();
+	mcp_wpml_register_site_administration_abilities();
+	mcp_wpml_register_string_administration_abilities();
+	mcp_wpml_register_job_distribution_abilities();
 }
 
 add_action('wp_abilities_api_init', 'mcp_wpml_register_abilities');

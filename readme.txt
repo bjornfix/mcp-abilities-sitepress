@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.53
+Stable tag: 0.3.54
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,11 +12,29 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.53 adds native manual translation controls and job administration. Inspect the exact cancellation preview before confirming loss of unfinished progress. ATE status errors preserve local jobs; existing completed translations are excluded. Manual mode stops new automatic work and ATE delivery but does not cancel existing external jobs or refund credits. Full WPML administration and secure registration remain outside this release.
+Version 0.3.54 adds selected native language administration, safe term links, content-string inventory and reviewed target updates, local translator selection and first-job dispatch, allowlisted settings, diagnostics, cache refresh and secure registration status/workflow. It exposes 53 abilities. These operations retain existing WordPress and WPML capabilities. Full WPML administration, registration-key entry, account connections and payments remain outside this release.
 
 
 This plugin exposes core WPML translation workflows through MCP:
 
+* `wpml/get-site-languages`
+* `wpml/add-site-language`
+* `wpml/set-active-site-languages`
+* `wpml/set-default-site-language`
+* `wpml/set-term-language-details`
+* `wpml/link-term-translation`
+* `wpml/get-general-settings`
+* `wpml/update-general-settings`
+* `wpml/get-diagnostics`
+* `wpml/clear-translation-cache`
+* `wpml/get-registration-status`
+* `wpml/get-registration-workflow`
+* `wpml/list-strings`
+* `wpml/get-string`
+* `wpml/update-string-translation`
+* `wpml/list-local-translators`
+* `wpml/assign-local-translation-job`
+* `wpml/create-local-translation-job`
 * `wpml/get-translation-controls`
 * `wpml/enable-manual-translation`
 * `wpml/list-translation-jobs`
@@ -62,8 +80,23 @@ Plugin page: https://devenia.com/plugins/mcp-abilities-sitepress/
 * Requires WordPress 6.9 or newer
 * Tested up to WordPress 7.1
 * Requires PHP 8.0 or newer
-* Native manual controls and job administration require WPML 4.7 or newer
+* Native administration controls require WPML 4.7 or newer
+* String operations require matching WPML String Translation and its native string inventory API
 * Intended for sites running WPML SitePress within that same WordPress release line
+
+= Selected administration workflows =
+
+Read native administrative languages, including hidden active languages, before changing activation or the default. Deactivation retains stored translations. Default changes retain WPML locale/user-language effects. These controls retain language lifecycle hooks but do not download language packs or create native setup notices. Term linking rejects occupied languages and existing linked groups and requires edit access to both terms.
+
+Settings changes accept only the selected synchronization and translated-slug allowlist. Review a preview and confirm against the current settings hash. Other options, domains, roles and account settings remain outside this Interface.
+
+String inventory uses the existing native WPML API with the current user and a native REST nonce. Select a content domain. Admin-option string domains remain in the secure native UI. Target updates require reviewed source/target hashes, an active target language and draft/complete state. Waiting and in-progress/partial targets are preserved. WPML owns text normalization and translation-file generation; review actual saved values.
+
+Local translator controls require existing qualified translators and native management permissions. Assignment applies only to waiting local manual post jobs. First-job creation requires native manual mode, an editable original post in a translated type and no existing target relationship, content or native job history. Existing work blocks resend. Native configured notifications may be sent. No translator roles, language pairs, ATE/external jobs or string/package dispatch are created. Coordinate concurrent edits to the same item; native APIs do not provide an atomic transaction with the WordPress UI.
+
+Diagnostics return selected status without a full debug dump or external connectivity probe. Cache refresh is the only supplied troubleshooting action; database repair, destructive reset, content deletion and orphan-job repair are excluded.
+
+Registration status reports site-key presence, not license validity. The workflow returns the existing native Installer link. Enter keys only in the native secure form, never in an MCP request. These abilities do not accept/return keys, register the site, connect accounts or manage payments.
 
 == Installation ==
 
@@ -75,6 +108,15 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.54 =
+
+* Added: Native language inventory, custom inactive language creation, reviewed activation/deactivation and default-language selection.
+* Added: Safe native term metadata and translation links with edit permissions and group collision checks.
+* Added: Content-string inventory and reviewed native target updates; retain native nonce/capability checks and preserve waiting/in-progress/partial targets.
+* Added: Existing local translator inventory, waiting manual assignment and first-job-only dispatch with source/job review hashes.
+* Added: Allowlisted general settings, selected diagnostics, cache refresh and secret-free registration status/secure workflow.
+* Limits: No language/content deletion, raw settings, role grants, existing-job resend, external dispatch, registration-key input/output or full WPML administration.
 
 = 0.3.53 =
 

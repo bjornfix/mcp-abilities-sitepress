@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.52
+Stable tag: 0.3.53
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,8 +12,17 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
+Version 0.3.53 adds native manual translation controls and job administration. Inspect the exact cancellation preview before confirming loss of unfinished progress. ATE status errors preserve local jobs; existing completed translations are excluded. Manual mode stops new automatic work and ATE delivery but does not cancel existing external jobs or refund credits. Full WPML administration and secure registration remain outside this release.
+
+
 This plugin exposes core WPML translation workflows through MCP:
 
+* `wpml/get-translation-controls`
+* `wpml/enable-manual-translation`
+* `wpml/list-translation-jobs`
+* `wpml/preview-translation-job-cancellation`
+* `wpml/cancel-translation-jobs`
+* `wpml/get-administration-coverage`
 * `wpml/list-page-translation-status`
 * `wpml/ensure-page-translation`
 * `wpml/ensure-post-translation`
@@ -53,6 +62,7 @@ Plugin page: https://devenia.com/plugins/mcp-abilities-sitepress/
 * Requires WordPress 6.9 or newer
 * Tested up to WordPress 7.1
 * Requires PHP 8.0 or newer
+* Native manual controls and job administration require WPML 4.7 or newer
 * Intended for sites running WPML SitePress within that same WordPress release line
 
 == Installation ==
@@ -65,6 +75,13 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.53 =
+
+* Added: Native WPML manual translation controls and redacted automation status.
+* Added: Current and historical jobs, exact cancellation previews, verified ATE cancellation, native local transitions, and repeat-safe readback.
+* Added: Administration coverage with explicit gaps and secure user steps.
+* Safety: Finished translations are excluded. Unverified remote status preserves local jobs. Cancellation requires acknowledgement of lost unfinished progress and does not refund credits.
 
 = 0.3.52 =
 * Correct exact redirect deletion to use the native Yoast target getter. Keep destination matching and native redirect exports intact.

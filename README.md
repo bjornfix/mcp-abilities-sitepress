@@ -2,18 +2,18 @@
 
 Find missing WPML translations, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.52](https://img.shields.io/badge/release-0.3.52-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.53](https://img.shields.io/badge/release-0.3.53-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.52 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.53 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
 ## What It Does
 
-The plugin exposes 29 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
+The plugin exposes 35 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
 
 It can identify a translated service page that still links to the original contact page, show the linked replacement, and apply that replacement when requested. It can also distinguish a missing translation from an existing draft that can be reused.
 
@@ -48,7 +48,7 @@ Multilingual site editors, agencies maintaining WPML sites, and developers conne
 ## Requirements
 
 - WordPress 6.9 or newer with its Abilities API, and PHP 8.0 or newer.
-- An active, configured WPML SitePress installation. These abilities are not registered without WPML.
+- An active, configured WPML SitePress installation. Native job administration and manual controls require WPML 4.7 or newer. These abilities are not registered without WPML.
 - An authenticated connection that exposes WordPress abilities to your assistant, such as [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/).
 - The matching plugin for optional operations: Elementor, Contact Form 7, Yoast SEO Premium, or Permalink Manager. These are not translation engines supplied by this plugin.
 
@@ -64,6 +64,12 @@ Ask your assistant to inspect a source page's translation group and report which
 
 | Ability | Purpose |
 | --- | --- |
+| `wpml/get-translation-controls` | Read selected automation, editor, delivery and ATE activation controls without keys |
+| `wpml/enable-manual-translation` | Disable new automatic translation, ATE delivery and string collection through native settings |
+| `wpml/list-translation-jobs` | List current and historical jobs, with optional external ATE status checks |
+| `wpml/preview-translation-job-cancellation` | Preview exact unfinished jobs and the consequences of cancellation |
+| `wpml/cancel-translation-jobs` | Cancel a confirmed current preview and verify local and external state |
+| `wpml/get-administration-coverage` | Distinguish supported functions, gaps and secure human steps |
 | `wpml/list-active-languages` | List configured languages without needing a frontend query |
 | `wpml/list-posts` | Query posts, pages, or custom post types in a language |
 | `wpml/list-terms` | Query terms in a language |
@@ -126,13 +132,35 @@ Check selected gallery images without changing files:
 
 Use that input with `wpml/repair-elementor-gallery-media`.
 
+### Manual translation and job administration
+
+Read `wpml/get-translation-controls` before requesting `wpml/enable-manual-translation` with `{"confirm": true}`. Manual mode selects native WordPress editing, the classic WPML document editor, review before publishing, manual service pickup, and disabled automatic draft translation and string collection. Selecting the global native editor clears per-post editor overrides through WPML's own controls. It preserves language relationships and translation content. Existing external jobs and previously consumed credits are not cancelled or refunded. Re-enabling ATE can make old work deliverable again.
+
+List jobs with `wpml/list-translation-jobs`:
+
+```json
+{"source_ids": [123], "include_history": true, "check_ate": true, "limit": 100}
+```
+
+An empty `source_ids` array covers the native site queue. The native repository supplies current jobs; WPML's previous-job operation supplies history for those groups. Unknown external status is reported explicitly. `external_verification_complete` describes unfinished jobs; finished translations are excluded from cancellation. Translation-service jobs that cannot be safely cancelled through the local native workflow remain blockers.
+
+Request `wpml/preview-translation-job-cancellation` with the reviewed source scope. It returns the exact IDs, count, loss warning and a preview valid for fifteen minutes for the same authenticated user. Only after authorizing that exact action, call `wpml/cancel-translation-jobs`:
+
+```json
+{"preview_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "confirm": true, "acknowledge_loss": true}
+```
+
+The ID above is illustrative. Cancellation requires ATE delivery to be disabled through native manual controls. It rejects changed local jobs, unreadable external state and missing acknowledgement. ATE cancellation and the absence of deliverable XLIFF in the native priority response must be confirmed before local changes. Failure can leave partial external cancellation; re-read the queue before retrying. Native state transitions preserve completed translations. A repeated successful preview returns its receipt and reads current queue state without cancelling newly added jobs. Cancellation can discard unfinished progress and does not refund consumed credits. The preview does not grant permission by itself.
+
+`wpml/get-administration-coverage` reports remaining gaps. This release does not provide full WPML administration, registration-key entry, account connections, payments or subscriptions.
+
 ### Frontend integration
 
 The `[mcp_wpml_language_flag]` shortcode renders a linked flag from WPML language data. The plugin also maps linked Contact Form 7 shortcodes to the current language and provides WPML sibling IDs to compatible Elementor editing tools. These features use existing translations.
 
 ## Permissions and Limits
 
-The ability permission check and the affected post's permission both apply. Administrative recovery and translation linking require `manage_options`; media operations also require media permissions. A connected assistant inherits the WordPress user's access.
+The ability permission check and the affected post's permission both apply. Administrative recovery and translation linking require `manage_options`; media operations also require media permissions. When String Translation is active, manual controls also require its native string-management or translation-management capability. A connected assistant inherits the WordPress user's access.
 
 Link and Elementor asset audits write only when `fix` is enabled. Gallery audits regenerate sizes only when repair is enabled. Switcher reset deletes custom configuration: inspect it first. Its legacy rebuild operation reports a reset, not proof that a rendered switcher works.
 
@@ -151,6 +179,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.53
+
+Add native translation controls, manual mode, current and historical job inventory, exact cancellation previews, verified native cancellation and an explicit administration coverage map. Remote status errors preserve local jobs; finished translations and newly added jobs are excluded from repeated cancellation. Registration credentials are not exposed.
 
 ### 0.3.52
 

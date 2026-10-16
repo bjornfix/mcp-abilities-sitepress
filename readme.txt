@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.54
+Stable tag: 0.3.55
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.54 adds selected native language administration, safe term links, content-string inventory and reviewed target updates, local translator selection and first-job dispatch, allowlisted settings, diagnostics, cache refresh and secure registration status/workflow. It exposes 53 abilities. These operations retain existing WordPress and WPML capabilities. Full WPML administration, registration-key entry, account connections and payments remain outside this release.
+Version 0.3.55 adds explicit post-translation reassignment from a reviewed previous group, with edit access to both originals and unchanged languages. It also includes selected native language administration, safe term links, content-string inventory and reviewed target updates, local translator selection and first-job dispatch, allowlisted settings, diagnostics, cache refresh and secure registration status/workflow. It exposes 53 abilities. These operations retain existing WordPress and WPML capabilities. Full WPML administration, registration-key entry, account connections and payments remain outside this release.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -108,6 +108,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.55 =
+
+* Added: Explicit post-translation reassignment with the reviewed previous group ID, edit access to both originals, unchanged languages, occupied-slot protection and native WPML readback.
 
 = 0.3.54 =
 

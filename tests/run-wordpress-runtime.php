@@ -64,6 +64,23 @@ try {
  $other=$create(array('post_type'=>'page','post_status'=>'draft','post_title'=>'Other fixture'));
  $r=$run('wpml/link-post-translation',array('source_id'=>$source,'target_id'=>$other,'target_lang'=>'fr'));
  $check(!$r['success'] && !isset($fixture_details[$other]),'Occupied translation language overwritten.');
+ $new_original=$create(array('post_type'=>'page','post_status'=>'draft','post_title'=>'New original fixture'));
+ $fixture_details[$new_original]=(object)array('trid'=>$new_original,'language_code'=>'en','source_language_code'=>null);
+ $before_content=get_post($target)->post_content;
+ $move=array('source_id'=>$new_original,'target_id'=>$target,'target_lang'=>'fr','reassign_from_trid'=>$source);
+ $check(!$run('wpml/link-post-translation',array_diff_key($move,array('reassign_from_trid'=>true)))['success'],'Implicit move escaped group protection.');
+ $stale=$move; $stale['reassign_from_trid']=$source+100000;
+ $check(!$run('wpml/link-post-translation',$stale)['success'],'Stale group accepted.');
+ $deny_previous=static function($caps,$cap,$uid,$args) use ($source) { return 'edit_post'===$cap && (int)($args[0]??0)===$source?array('do_not_allow'):$caps; };
+ add_filter('map_meta_cap',$deny_previous,999,4);
+ try { $check(!$run('wpml/link-post-translation',$move)['success'],'Move ignored previous-original permissions.'); }
+ finally { remove_filter('map_meta_cap',$deny_previous,999); }
+ $r=$run('wpml/link-post-translation',$move);
+ $check($r['success'] && $r['reassigned'] && $r['previous_source_id']===$source && $fixture_details[$target]->trid===$new_original,'Explicit native relationship move failed.');
+ $check($fixture_details[$source]->trid===$source && get_post($target)->post_content===$before_content,'Move changed the previous original or target content.');
+ $check($run('wpml/link-post-translation',$move)['success'],'Repeated move failed.');
+ // Restore the original fixture relation for the remaining shell checks.
+ $check($run('wpml/link-post-translation',array('source_id'=>$source,'target_id'=>$target,'target_lang'=>'fr','reassign_from_trid'=>$new_original))['success'],'Reverse fixture move failed.');
  $deny=static function($caps,$cap,$uid,$args) use ($source) { return in_array($cap,array('edit_post','read_post'),true) && (int)($args[0]??0)===$source?array('do_not_allow'):$caps; };
  add_filter('map_meta_cap',$deny,999,4);
  try {

@@ -162,6 +162,7 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		$source_id = isset($input['source_id']) ? (int) $input['source_id'] : 0;
 		$target_id = isset($input['target_id']) ? (int) $input['target_id'] : 0;
 		$target_lang = isset($input['target_lang']) ? sanitize_key((string) $input['target_lang']) : '';
+		$reassign_from_trid = isset($input['reassign_from_trid']) ? (int) $input['reassign_from_trid'] : 0;
 
 		if ($source_id <= 0 || $target_id <= 0 || '' === $target_lang) {
 			return array('success' => false, 'message' => 'source_id, target_id, and target_lang are required.');
@@ -210,11 +211,37 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		if ($target_details && (int) $target_details->trid === (int) $source_details->trid && (string) $target_details->language_code === $target_lang) {
 			return array('success' => true, 'source_id' => $source_id, 'target_id' => $target_id, 'trid' => (int) $source_details->trid, 'target_lang' => $target_lang, 'message' => 'Post is already linked in the requested language.');
 		}
-		if ($target_details && !empty($target_details->trid) && (int) $target_details->trid !== (int) $source_details->trid) {
+		$previous_trid = $target_details ? (int) $target_details->trid : 0;
+		$previous_source_id = 0;
+		$target_group = array();
+		if ($reassign_from_trid && $reassign_from_trid !== $previous_trid) {
+			return array('success' => false, 'message' => 'The target translation group changed. Review it before reassigning.');
+		}
+		if ($previous_trid && $previous_trid !== (int) $source_details->trid) {
 			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook provided by WPML plugin.
-			$target_group = apply_filters('wpml_get_element_translations', null, (int) $target_details->trid, $element_type);
-			if (!is_array($target_group) || count($target_group) > 1) {
+			$target_group = apply_filters('wpml_get_element_translations', null, $previous_trid, $element_type);
+			if (!is_array($target_group)) {
+				return array('success' => false, 'message' => 'Could not read the target translation group.');
+			}
+			if (count($target_group) > 1 && !$reassign_from_trid) {
 				return array('success' => false, 'message' => 'Target belongs to another translation group.');
+			}
+		}
+		if ($reassign_from_trid) {
+			if (!$previous_trid || $previous_trid === (int) $source_details->trid || empty($target_details->source_language_code) || !empty($source_details->source_language_code) || (string) $target_details->language_code !== $target_lang || (string) $target_details->source_language_code !== (string) $source_details->language_code) {
+				return array('success' => false, 'message' => 'Reassignment requires an existing translation and a new original in the same source language; the target language must stay unchanged.');
+			}
+			if (!isset($target_group[$target_lang]) || (int) $target_group[$target_lang]->element_id !== $target_id) {
+				return array('success' => false, 'message' => 'The reviewed target is missing from its translation group.');
+			}
+			foreach ($target_group as $translation) {
+				if (!empty($translation->original) && (string) $translation->language_code === (string) $source_details->language_code) {
+					$previous_source_id = (int) $translation->element_id;
+				}
+			}
+			$previous_source = get_post($previous_source_id);
+			if (!$previous_source || (string) $previous_source->post_type !== $post_type || !current_user_can('edit_post', $previous_source_id)) {
+				return array('success' => false, 'message' => 'You must be able to edit the previous original before reassigning its translation.');
 			}
 		}
 
@@ -234,8 +261,11 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 
 		clean_post_cache($source_id);
 		clean_post_cache($target_id);
+		if ($previous_source_id) {
+			clean_post_cache($previous_source_id);
+		}
 		$target_details = mcp_wpml_lang_details($target_id, $post_type);
-		if (!$target_details || (int) $target_details->trid !== (int) $source_details->trid || (string) $target_details->language_code !== $target_lang) {
+		if (!$target_details || (int) $target_details->trid !== (int) $source_details->trid || (string) $target_details->language_code !== $target_lang || ($reassign_from_trid && (string) $target_details->source_language_code !== (string) $source_details->language_code)) {
 			return array('success' => false, 'message' => 'WPML did not persist the requested translation link.');
 		}
 
@@ -249,6 +279,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 			'source_lang' => (string) $source_details->language_code,
 			'target_lang' => $target_lang,
 			'target_details' => $target_details ? mcp_wpml_normalize_scalar($target_details) : array(),
+			'reassigned' => (bool) $reassign_from_trid,
+			'previous_trid' => $previous_trid,
+			'previous_source_id' => $previous_source_id,
 			'message' => 'Post linked as WPML translation.',
 		);
 	};
@@ -257,7 +290,7 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 		'wpml/link-post-translation',
 		array(
 			'label' => 'Link Post Translation',
-			'description' => 'Links an existing target post/CPT item to an existing source post/CPT item as a WPML translation. Supports Elementor library templates and other translated post types.',
+			'description' => 'Links an existing target to a source without replacing an occupied language slot. Explicit reassignment requires the reviewed previous group ID and edit access to both originals. Supports translated post types including Elementor templates.',
 			'category' => 'site',
 			'input_schema' => array(
 				'type' => 'object',
@@ -266,6 +299,7 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 					'source_id' => array('type' => 'integer'),
 					'target_id' => array('type' => 'integer'),
 					'target_lang' => array('type' => 'string'),
+					'reassign_from_trid' => array('type' => 'integer', 'minimum' => 1, 'description' => 'Explicitly move this translation from its reviewed current group to the source original, preserving both languages.'),
 				),
 				'additionalProperties' => false,
 			),
@@ -281,6 +315,9 @@ function mcp_wpml_register_translation_mutation_abilities(): void {
 					'source_lang' => array('type' => 'string'),
 					'target_lang' => array('type' => 'string'),
 					'target_details' => array('type' => 'object'),
+					'reassigned' => array('type' => 'boolean'),
+					'previous_trid' => array('type' => 'integer'),
+					'previous_source_id' => array('type' => 'integer'),
 					'message' => array('type' => 'string'),
 					'source_post_type' => array('type' => 'string'),
 					'target_post_type' => array('type' => 'string'),

@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.54](https://img.shields.io/badge/release-0.3.54-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.55](https://img.shields.io/badge/release-0.3.55-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.54 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.55 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -129,6 +129,14 @@ Inspect the group for a source page:
 
 Use that input with `wpml/get-post-translations`. The IDs below are illustrative; obtain real IDs from your site.
 
+To move an existing translation to a different original, first inspect both groups. Use `wpml/link-post-translation` with the reviewed previous group ID:
+
+```json
+{"source_id": 123, "target_id": 456, "target_lang": "fr", "reassign_from_trid": 789}
+```
+
+This moves only the translation relationship. It does not copy or translate content. Both originals must use the same source language, the target language must stay unchanged, and all three posts must be editable. An occupied target-language slot is never replaced. Retrying an already completed link succeeds without another write.
+
 Create or reuse a French draft through `wpml/ensure-post-translation`:
 
 ```json
@@ -232,6 +240,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.55
+
+Allow an existing translation to move to a new original when the caller supplies its reviewed previous group ID. Require edit access to both originals, preserve source and target languages, reject occupied target slots, and verify the native WPML relationship. Calls without explicit reassignment retain the existing group protection.
 
 ### 0.3.54
 

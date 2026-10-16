@@ -18,12 +18,17 @@ function mcp_wpml_get_active_languages($skip = false) { return array('en' => arr
 function mcp_wpml_configured_languages() { return array('en' => array(), 'fr' => array()); }
 function apply_filters($hook, $value, ...$args) {
  if ('wpml_post_language_details' === $hook) { return array('locale' => 'en_GB'); }
- return 'wpml_get_element_translations' === $hook ? ($GLOBALS['translations'] ?? array()) : $value;
+ return 'wpml_get_element_translations' === $hook ? ($GLOBALS['translation_groups'][$args[0]] ?? $GLOBALS['translations'] ?? array()) : $value;
 }
 function mcp_wpml_target_id_for_post_type($id, $type, $lang) { return 0; }
 function mcp_wpml_normalize_scalar($value) { return (array) $value; }
 function clean_post_cache($id) {}
-function do_action(...$args) { ++$GLOBALS['writes']; $GLOBALS['last_action'] = $args; }
+function do_action(...$args) {
+ ++$GLOBALS['writes']; $GLOBALS['last_action'] = $args;
+ if (!empty($GLOBALS['persist_link']) && 'wpml_set_element_language_details' === $args[0]) {
+  $v=$args[1]; $GLOBALS['details'][$v['element_id']]=(object)array('trid'=>$v['trid'],'language_code'=>$v['language_code'],'source_language_code'=>$v['source_language_code']);
+ }
+}
 function update_post_meta(...$args) { ++$GLOBALS['writes']; }
 function wp_kses_post($value) { return $value; }
 function sanitize_title($value) { return $value; }
@@ -118,5 +123,41 @@ if (!empty($result['success'])) { $failures[] = 'link reported success when WPML
 $editable[] = 3;
 $result = $abilities['wpml/update-contact-form-7-translation-form']['execute_callback']($cases['wpml/update-contact-form-7-translation-form']);
 if (!empty($result['success']) || 1 !== WPCF7_ContactForm::$saved) { $failures[] = 'form bypassed native save or ignored a save failure'; }
+// An explicit move changes only the requested relationship; refusal must not write.
+$reset_move = static function() {
+ $GLOBALS['posts']=array(1=>(object)array('post_type'=>'page','post_content'=>'New source'),2=>(object)array('post_type'=>'page','post_content'=>'Reviewed target'),3=>(object)array('post_type'=>'page','post_content'=>'Old source'),4=>(object)array('post_type'=>'page','post_content'=>'Other translation'));
+ $GLOBALS['details']=array(1=>(object)array('trid'=>10,'language_code'=>'en','source_language_code'=>null),2=>(object)array('trid'=>20,'language_code'=>'fr','source_language_code'=>'en'),3=>(object)array('trid'=>20,'language_code'=>'en','source_language_code'=>null),4=>(object)array('trid'=>20,'language_code'=>'de','source_language_code'=>'en'));
+ $GLOBALS['translation_groups']=array(10=>array('en'=>(object)array('element_id'=>1,'language_code'=>'en','original'=>true)),20=>array('en'=>(object)array('element_id'=>3,'language_code'=>'en','original'=>true),'fr'=>(object)array('element_id'=>2,'language_code'=>'fr','original'=>false),'de'=>(object)array('element_id'=>4,'language_code'=>'de','original'=>false)));
+ $GLOBALS['editable']=array(1,2,3); $GLOBALS['writes']=0; $GLOBALS['persist_link']=true;
+};
+$move_input=array('source_id'=>1,'target_id'=>2,'target_lang'=>'fr','reassign_from_trid'=>20);
+$link=$abilities['wpml/link-post-translation']['execute_callback'];
+$refusals=array(
+ 'default group protection'=>static function(&$input) { unset($input['reassign_from_trid']); },
+ 'stale previous group'=>static function(&$input) { $input['reassign_from_trid']=19; },
+ 'target language change'=>static function(&$input) { $input['target_lang']='en'; },
+ 'existing target language change'=>static function(&$input) { $GLOBALS['details'][2]->language_code='de'; },
+ 'target original'=>static function(&$input) { $GLOBALS['details'][2]->source_language_code=null; },
+ 'translated new source'=>static function(&$input) { $GLOBALS['details'][1]->source_language_code='de'; },
+ 'different source language'=>static function(&$input) { $GLOBALS['details'][2]->source_language_code='de'; },
+ 'old original permission'=>static function(&$input) { $GLOBALS['editable']=array(1,2); },
+ 'missing old original'=>static function(&$input) { unset($GLOBALS['translation_groups'][20]['en']); },
+ 'missing target group member'=>static function(&$input) { unset($GLOBALS['translation_groups'][20]['fr']); },
+ 'occupied new language'=>static function(&$input) { $GLOBALS['translation_groups'][10]['fr']=(object)array('element_id'=>99,'language_code'=>'fr'); },
+);
+foreach ($refusals as $name=>$alter) {
+ $reset_move(); $input=$move_input; $alter($input); $before=serialize(array($details,$posts)); $result=$link($input);
+ if (!empty($result['success']) || $writes || serialize(array($details,$posts))!==$before) { $failures[]='Reassignment did not refuse '.$name.' without mutation'; }
+}
+$reset_move(); $before_posts=serialize($posts); $before_others=serialize(array($details[1],$details[3],$details[4]));
+$result=$link($move_input);
+if (empty($result['success']) || empty($result['reassigned']) || 20!==$result['previous_trid'] || 3!==$result['previous_source_id'] || 1!==$writes || 10!==$details[2]->trid || 'fr'!==$details[2]->language_code || 'en'!==$details[2]->source_language_code || serialize($posts)!==$before_posts || serialize(array($details[1],$details[3],$details[4]))!==$before_others) { $failures[]='Explicit move did not preserve other relationships and content'; }
+$result=$link($move_input);
+if (empty($result['success']) || 1!==$writes) { $failures[]='Completed move was not idempotent'; }
+$reset_move(); $persist_link=false; $result=$link($move_input);
+if (!empty($result['success']) || 1!==$writes) { $failures[]='Move ignored failed native readback'; }
+$reset_move(); unset($details[2]); unset($move_input['reassign_from_trid']);
+$result=$link($move_input);
+if (empty($result['success']) || 1!==$writes) { $failures[]='Ordinary unassigned-post linking regressed'; }
 if ($failures) { fwrite(STDERR, implode("\n", $failures) . "\n"); exit(1); }
-echo "Mutation permission and readback checks passed\n";
+echo "Mutation permission, explicit reassignment, preservation and readback checks passed\n";

@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.60](https://img.shields.io/badge/release-0.3.60-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.61](https://img.shields.io/badge/release-0.3.61-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.60 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.61 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -111,7 +111,7 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/audit-translation-integrity` | Inspect text, URLs, galleries, and optional frontend markers |
 | `wpml/audit-elementor-language-assets` | Inspect or repair translated template references and Trustpilot locale markup |
 | `wpml/audit-elementor-gallery-media` | Inspect gallery use, media sizes, and caption markers; optionally repair sizes |
-| `wpml/repair-elementor-gallery-media` | Regenerate missing image sizes for selected gallery attachments |
+| `wpml/repair-elementor-gallery-media` | Regenerate missing image sizes, or remove reviewed misplaced Elementor thumbnail references without changing files |
 | `wpml/update-media-captions-batch` | Update selected attachment titles, captions, or descriptions |
 | `wpml/get-language-switcher-settings` | Read the stored language-switcher configuration |
 | `wpml/list-language-switcher-slots` | Inspect menu, sidebar, and static slots |
@@ -160,6 +160,14 @@ Check selected gallery images without changing files:
 ```
 
 Use that input with `wpml/repair-elementor-gallery-media`.
+
+For a custom size that points into the wrong upload subdirectory, inspect the bounded operation first:
+
+```json
+{"operation": "prune_invalid_srcset_sizes", "attachment_ids": [789], "size_keys": ["elementor_custom_400x400"], "dry_run": true}
+```
+
+This operation accepts one editable image and explicit Elementor custom size keys. It only proposes removing entries whose relative thumbnail is missing while the matching global Elementor thumbnail exists. Existing valid sizes stay. To apply, copy `expected_metadata_hash` from the reviewed response and repeat the input with `dry_run: false`. A stale hash is refused. Original files, other size entries and image text are preserved; files are not regenerated or deleted. The existing upload, page-edit and attachment-edit permissions remain required.
 
 ### Manual translation and job administration
 
@@ -246,6 +254,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.61
+
+- Add a bounded, previewable repair for misplaced Elementor thumbnail references. Explicit size keys and a reviewed metadata hash restrict changes to selected invalid entries while preserving image files and other metadata.
 
 ### 0.3.60
 

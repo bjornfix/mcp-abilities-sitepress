@@ -11,9 +11,18 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+require_once __DIR__ . '/elementor-srcset-repair.php';
+
 function mcp_wpml_register_elementor_media_abilities(): void {
 	$repair_elementor_gallery_media = function ($input = array()): array {
 		$input = is_array($input) ? $input : array();
+		$operation = $input['operation'] ?? 'regenerate';
+		if ('prune_invalid_srcset_sizes' === $operation) {
+			return mcp_wpml_prune_invalid_elementor_srcset_sizes($input);
+		}
+		if ('regenerate' !== $operation) {
+			return array('success' => false, 'message' => 'Unknown media repair operation.');
+		}
 		$page_id = isset($input['page_id']) ? (int) $input['page_id'] : 0;
 		$element_id = isset($input['element_id']) ? trim((string) $input['element_id']) : '';
 		$attachment_ids = array();
@@ -168,11 +177,14 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 		'wpml/repair-elementor-gallery-media',
 		array(
 			'label'       => 'Repair Elementor Gallery Media',
-			'description' => 'Regenerate missing thumbnail metadata/files for WPML-translated media used by an Elementor gallery.',
+			'description' => 'Regenerate missing gallery image sizes, or prune explicitly reviewed misplaced Elementor thumbnail entries without regenerating files.',
 			'category'    => 'site',
 			'input_schema' => array(
 				'type'       => 'object',
 				'properties' => array(
+					'operation' => array('type' => 'string', 'enum' => array('regenerate', 'prune_invalid_srcset_sizes'), 'default' => 'regenerate'),
+					'size_keys' => array('type' => 'array', 'items' => array('type' => 'string'), 'minItems' => 1, 'maxItems' => 10, 'description' => 'Explicit elementor_custom_WIDTHxHEIGHT entries for the bounded prune operation.'),
+					'expected_metadata_hash' => array('type' => 'string', 'description' => 'SHA-256 from the reviewed prune dry run; required when applying a change.'),
 					'page_id' => array('type' => 'integer', 'description' => 'Page/post containing the Elementor gallery.'),
 					'element_id' => array('type' => 'string', 'description' => 'Elementor gallery element ID.'),
 					'attachment_ids' => array(
@@ -190,6 +202,15 @@ function mcp_wpml_register_elementor_media_abilities(): void {
 				'type'       => 'object',
 				'properties' => array(
 					'success' => array('type' => 'boolean'),
+					'operation' => array('type' => 'string'),
+					'attachment_id' => array('type' => 'integer'),
+					'proposed_size_keys' => array('type' => 'array', 'items' => array('type' => 'string')),
+					'kept_size_keys' => array('type' => 'array', 'items' => array('type' => 'string')),
+					'removed_size_keys' => array('type' => 'array', 'items' => array('type' => 'string')),
+					'expected_metadata_hash' => array('type' => 'string'),
+					'metadata_hash_after' => array('type' => 'string'),
+					'metadata_changed' => array('type' => 'boolean'),
+					'verified' => array('type' => 'boolean'),
 					'page_id' => array('type' => 'integer'),
 					'element_id' => array('type' => 'string'),
 					'size' => array('type' => 'string'),

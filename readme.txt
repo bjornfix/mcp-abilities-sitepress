@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.55
+Stable tag: 0.3.56
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.55 adds explicit post-translation reassignment from a reviewed previous group, with edit access to both originals and unchanged languages. It also includes selected native language administration, safe term links, content-string inventory and reviewed target updates, local translator selection and first-job dispatch, allowlisted settings, diagnostics, cache refresh and secure registration status/workflow. It exposes 53 abilities. These operations retain existing WordPress and WPML capabilities. Full WPML administration, registration-key entry, account connections and payments remain outside this release.
+Version 0.3.56 displays translated attachment text in native Elementor Pro Gallery and lightboxes while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin also exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -108,6 +108,12 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.56 =
+
+* Fixed: Native Elementor Gallery overlays, lightbox text and frontend attachment alt lookups use the current language while preserving original image identity and native rendering.
+* Added: Native WPML String Translation fallback for attachment text without a translated media record or field; original text is retained until translated.
+* Preserved: Original-language output, native lightbox field selections, image lifecycle hooks, raw administration/REST/CLI reads and all 53 existing abilities.
 
 = 0.3.55 =
 

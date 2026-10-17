@@ -41,8 +41,12 @@ namespace {
 		$GLOBALS['mcp_posts'][$id + 10]->post_parent = $id + 100;
 		$GLOBALS['mcp_posts'][$id + 20] = new WP_Post($id + 20, 'Öffentliche Quelle', 'Öffentliche Bildunterschrift', 'Öffentliche Beschreibung');
 	}
-	$GLOBALS['mcp_meta'] = array(1 => 'Deutscher Alternativtext', 2 => 'English alt', 3 => 'Alternativtext ohne Medienpartner', 4 => 'Anderer Alternativtext', 7 => 'Alternativtext beibehalten', 8 => 'Original alt', 9 => '<img src=x onerror=bad()>Safe alt');
-	$GLOBALS['mcp_pairs'] = array(1 => 2, 2 => 1, 4 => 5, 8 => 9, 31 => 21, 32 => 22, 33 => 23);
+	$GLOBALS['mcp_posts'][14] = new WP_Post(14, 'Private Quelle mit öffentlichem Ziel', 'Private Bildunterschrift ohne Zieltext', 'Private Beschreibung');
+	$GLOBALS['mcp_posts'][14]->post_parent = 111;
+	$GLOBALS['mcp_posts'][24] = new WP_Post(24, 'Public English media title', '', 'Public English description');
+	$GLOBALS['mcp_posts'][24]->post_parent = 113;
+	$GLOBALS['mcp_meta'] = array(14 => 'Privater Alternativtext', 24 => 'Public English alt', 1 => 'Deutscher Alternativtext', 2 => 'English alt', 3 => 'Alternativtext ohne Medienpartner', 4 => 'Anderer Alternativtext', 7 => 'Alternativtext beibehalten', 8 => 'Original alt', 9 => '<img src=x onerror=bad()>Safe alt');
+	$GLOBALS['mcp_pairs'] = array(1 => 2, 2 => 1, 4 => 5, 8 => 9, 31 => 21, 32 => 22, 33 => 23, 14 => 24);
 	$GLOBALS['mcp_strings'] = array(
 		'attachment-3-title:en' => 'No separate media record', 'attachment-3-caption:en' => 'Caption without a separate media record',
 		'attachment-3-description:en' => 'Description without a separate media record', 'attachment-3-alt:en' => 'Alt without a separate media record',
@@ -79,9 +83,9 @@ namespace {
 	function wp_insert_post(...$args) { throw new \RuntimeException('Attachment/content creation is forbidden in this text Interface.'); }
 	function wp_update_post(...$args) { throw new \RuntimeException('Source storage mutation is forbidden in this rendering Interface.'); }
 	add_filter('wpml_current_language', static fn($value) => $GLOBALS['mcp_lang']);
-	add_filter('wpml_element_language_details', static function($value, $args) { return (object) array('language_code' => in_array($args['element_id'], array(2, 5, 9, 21, 22, 23), true) ? 'en' : 'de'); }, 10, 2);
+	add_filter('wpml_element_language_details', static function($value, $args) { return (object) array('language_code' => in_array($args['element_id'], array(2, 5, 9, 21, 22, 23, 24), true) ? 'en' : 'de'); }, 10, 2);
 	add_filter('wpml_object_id', static function($id, $type, $fallback, $lang) {
-		$source_lang = in_array($id, array(2, 5, 9, 21, 22, 23), true) ? 'en' : 'de';
+		$source_lang = in_array($id, array(2, 5, 9, 21, 22, 23, 24), true) ? 'en' : 'de';
 		return $source_lang === $lang ? $id : ($GLOBALS['mcp_pairs'][$id] ?? null);
 	}, 10, 4);
 	add_action('wpml_register_single_string', static function($domain, $name, $value, $allow_empty, $source_lang) { $GLOBALS['mcp_registered'][$name] = compact('domain', 'value', 'source_lang'); }, 10, 5);
@@ -174,6 +178,9 @@ namespace {
 			$target_inherited = $gallery->native_call($id + 20);
 			$assert($target_inherited['title'] === 'Öffentliche Quelle', 'Translated attachment text inherited from a private/draft parent was exposed.');
 		}
+		$public_target = $gallery->native_call(14);
+		$assert($public_target['title'] === 'Public English media title' && $public_target['description'] === 'Public English description' && $public_target['alt'] === 'Public English alt', 'An old unpublished source parent blocked existing public translated media text.');
+		$assert($public_target['caption'] === 'Private Bildunterschrift ohne Zieltext' && !isset($GLOBALS['mcp_registered']['attachment-14-caption']) && !isset($GLOBALS['mcp_registered']['attachment-14-title']), 'Unpublished source text entered native public String Translation registration.');
 		$public_inherited = $gallery->native_call(33);
 		$assert($public_inherited['title'] === 'Inherited English title', 'Public inherited attachment translation was rejected.');
 		$safe = $gallery->native_call(8); $assert($safe['title'] === 'Safe title' && $safe['caption'] === '<strong>Credit</strong>' && $safe['alt'] === 'Safe alt', 'Translated metadata bypassed native text/HTML sanitization.');

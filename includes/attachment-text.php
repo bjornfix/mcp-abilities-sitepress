@@ -31,7 +31,8 @@ final class MCP_WPML_Attachment_Text {
 		self::$reading = true;
 		try {
 			$source = self::raw($post);
-			if (!self::frontend() || !is_post_publicly_viewable($post)) { return $source; }
+			if (!self::frontend()) { return $source; }
+			$public_source = is_post_publicly_viewable($post);
 			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Native WPML language hook.
 			$lang = apply_filters('wpml_current_language', null);
 			$details = mcp_wpml_lang_details($id, 'attachment');
@@ -52,7 +53,7 @@ final class MCP_WPML_Attachment_Text {
 					$safe = self::safe($field, $translated[$field]);
 					if ('' !== trim($safe)) { $result[$field] = $safe; continue; }
 				}
-				if ('' === trim($value)) { continue; }
+				if (!$public_source || '' === trim($value)) { continue; }
 				// A missing media record/field uses WPML's existing String Translation store.
 				// Register the public source text, not a new attachment or page-specific overlay.
 				$name = 'attachment-' . $id . '-' . $field;

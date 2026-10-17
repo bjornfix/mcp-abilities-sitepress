@@ -33,12 +33,16 @@ function mcp_wpml_elementor_preview_language(WP $wp): void {
 	}
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Elementor verifies its own signed, expiring token below.
-	$raw_token = $_GET[Preview_Token::QUERY_ARG] ?? null;
-	if (!is_string($raw_token) || '' === $raw_token) {
+	if (!isset($_GET[Preview_Token::QUERY_ARG]) || !is_string($_GET[Preview_Token::QUERY_ARG])) {
+		return;
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Elementor verifies its own signed, expiring token below.
+	$token = sanitize_text_field(wp_unslash($_GET[Preview_Token::QUERY_ARG]));
+	if ('' === $token) {
 		return;
 	}
 
-	$claims = Preview_Token::decode(sanitize_text_field(wp_unslash($raw_token)), Preview_Token::secret());
+	$claims = Preview_Token::decode($token, Preview_Token::secret());
 	if (null === $claims || Preview_Token::is_expired($claims, time())) {
 		return;
 	}

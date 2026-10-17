@@ -66,6 +66,7 @@ namespace {
 		if ('inherit' === $status) { $parent = get_post($post->post_parent); $status = $parent ? $parent->post_status : 'publish'; }
 		return 'publish' === $status;
 	}
+	function get_the_title($id) { $post = get_post($id); return apply_filters('the_title', $post ? $post->post_title : '', $id); }
 	function get_post_meta($id, $key, $single = false) {
 		$filtered = apply_filters('get_post_metadata', null, $id, $key, $single);
 		if (null !== $filtered) { return $filtered; }
@@ -87,6 +88,7 @@ namespace {
 	add_filter('wpml_translate_single_string', static fn($value, $domain, $name, $lang) => $GLOBALS['mcp_strings'][$name . ':' . $lang] ?? $value, 10, 4);
 }
 namespace Elementor {
+	class Control_Media { public static function get_image_title($image) { return empty($image['id']) ? '' : \get_the_title($image['id']); } }
 	class Images_Manager {
 		public function __construct() { \add_action('wp_ajax_elementor_get_images_details', array($this, 'get_images_details')); }
 		public function get_images_details() { return 'native lifecycle'; }
@@ -140,6 +142,14 @@ namespace {
 	$assert($out['description'] === ($front ? 'English description' : 'Deutsche Beschreibung'), 'Native Gallery description language mismatch.');
 	$assert($out['alt'] === ($front ? 'English alt' : 'Deutscher Alternativtext'), 'Native Gallery accessible label mismatch.');
 	$assert($out['media'] === '/original/1.jpg' && $out['src'] === '/thumbnail/1.jpg' && $out['width'] === 412 && $out['height'] === 309, 'Gallery substituted media identity, URL, dimensions or crop.');
+	$assert(\Elementor\Control_Media::get_image_title(array('id' => 1)) === ($front ? 'Windows with glazing bars' : 'Fenster mit Sprossen'), 'Native retained-ID image tooltip reads wrong-language attachment title.');
+	$assert(get_the_title(6) === 'Eine Seite', 'Attachment text resolver changed an ordinary page title.');
+	$assert(apply_filters('the_title', 'Custom editorial tooltip', 1) === 'Custom editorial tooltip', 'Explicit custom title from another native filter was overwritten.');
+	$assert(apply_filters('the_title', '', 1) === '', 'Disabled/empty image title was enabled.');
+	add_filter('the_title', static fn($title) => '[' . $title . ']', 10, 1);
+	$assert(\Elementor\Control_Media::get_image_title(array('id' => 1)) === '[' . ($front ? 'Windows with glazing bars' : 'Fenster mit Sprossen') . ']', 'Native title formatting after translation was lost.');
+	array_pop($GLOBALS['mcp_hooks']['the_title'][10]);
+
 	$lightbox = $images->get_lightbox_image_attributes(1);
 	$assert($lightbox['title'] === ($front ? 'Windows with glazing bars' : 'Fenster mit Sprossen') && $lightbox['description'] === ($front ? 'English description' : 'Deutsche Beschreibung'), 'Native lightbox attributes ignored translated text.');
 	$kit->settings['lightbox_title_src'] = 'caption'; $kit->settings['lightbox_description_src'] = 'alt';
@@ -170,6 +180,7 @@ namespace {
 		$assert($gallery->native_cache_contract(), 'Language-dependent Gallery text can be served as a static fragment.');
 		$GLOBALS['mcp_lang'] = 'de'; $original = $gallery->native_call(1);
 		$assert($original['title'] === 'Fenster mit Sprossen' && $original['caption'] === 'Deutsche Bildunterschrift' && $original['alt'] === 'Deutscher Alternativtext', 'Translated text leaked back into the original language.');
+		$assert(\Elementor\Control_Media::get_image_title(array('id' => 1)) === 'Fenster mit Sprossen', 'Translated image tooltip leaked into the original language.');
 	}
 	$assert($source_before === serialize(array($GLOBALS['mcp_posts'], $GLOBALS['mcp_meta'], $GLOBALS['mcp_pairs'])), 'Rendering mutated source/target posts, media metadata or WPML relationships.');
 	echo json_encode(array('success' => true, 'mode' => $mode, 'native_interface_checks' => $checks, 'source_and_media_unchanged' => true), JSON_PRETTY_PRINT) . PHP_EOL;

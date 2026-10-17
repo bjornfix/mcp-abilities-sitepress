@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.56](https://img.shields.io/badge/release-0.3.56-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.57](https://img.shields.io/badge/release-0.3.57-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.56 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.57 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -219,9 +219,9 @@ Use the returned `before.source_hash` as `expected_source_hash` and `target_hash
 
 The `[mcp_wpml_language_flag]` shortcode renders a linked flag from WPML language data. The plugin also maps linked Contact Form 7 shortcodes to the current language and provides WPML sibling IDs to compatible Elementor editing tools. These features use existing translations.
 
-Native Elementor Pro Gallery overlays, accessible image labels and lightbox title/description selections use the current language’s existing attachment text. Original image IDs, files, URLs, sizing, crops and native layout remain in use. The original Images Manager keeps its image-management hooks. Gallery text is treated as language-dependent dynamic content.
+Native Elementor Pro Gallery overlays, accessible image labels, attachment tooltips and lightbox title/description selections use the current language’s existing attachment text. Original image IDs, files, URLs, sizing, crops and native layout remain in use. The original Images Manager keeps its image-management hooks. Gallery text is treated as language-dependent dynamic content.
 
-When an attachment has no translated media record or a text field is still empty, its public source text is registered in WPML String Translation under **MCP Media Text**, with names such as `attachment-123-title`. Translate the selected field through the native String Translation interface or the existing string abilities. This does not create a media attachment or generate a translation. Original text remains visible until translated; incomplete work is not hidden. Existing nonempty translated media fields take precedence. Original-language output and raw admin, REST and WP-CLI reads are preserved.
+When an attachment has no translated media record or a text field is still empty, its public source text is registered in WPML String Translation under **MCP Media Text**, with names such as `attachment-123-title`. Translate the selected field through the native String Translation interface or the existing string abilities. This does not create a media attachment or generate a translation. Original text remains visible until translated; incomplete work is not hidden. Existing nonempty translated media fields take precedence. The native WordPress attachment-title lookup also supplies retained-ID image tooltips, including custom-size Loop images. Ordinary post/page titles, explicitly filtered alternative titles, empty title choices, original-language output and raw admin, REST and WP-CLI reads are preserved.
 
 ## Permissions and Limits
 
@@ -244,6 +244,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.57
+
+- Resolve retained-ID image tooltip titles through the native WordPress attachment-title Interface, including custom-size Elementor Loop images.
+- Preserve ordinary content titles, explicitly filtered titles, native formatting and disabled/empty title choices.
 
 ### 0.3.56
 

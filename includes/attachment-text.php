@@ -81,6 +81,17 @@ function mcp_wpml_frontend_attachment_alt($value, $id, $key, $single) {
 }
 add_filter('get_post_metadata', 'mcp_wpml_frontend_attachment_alt', 20, 4);
 
+/** Elementor Control_Media uses get_the_title even for custom-size image tooltips. */
+function mcp_wpml_frontend_attachment_title($title, $id) {
+	if (!is_string($title) || '' === trim($title) || !MCP_WPML_Attachment_Text::frontend() || MCP_WPML_Attachment_Text::reading()) { return $title; }
+	$post = get_post((int) $id);
+	if (!$post instanceof WP_Post || 'attachment' !== $post->post_type || $title !== (string) $post->post_title) { return $title; }
+	$text = MCP_WPML_Attachment_Text::get((int) $id);
+	return isset($text['title']) && '' !== trim($text['title']) ? $text['title'] : $title;
+}
+// Resolve the native attachment title before WordPress texturizes it; preserve explicit filtered titles.
+add_filter('the_title', 'mcp_wpml_frontend_attachment_title', 5, 2);
+
 /** Keep native Images_Manager lifecycle hooks; adapt only its textual lightbox lookup. */
 function mcp_wpml_register_elementor_attachment_text(): void {
 	if (!defined('ICL_SITEPRESS_VERSION') || !class_exists('Elementor\\Plugin') || !class_exists('Elementor\\Images_Manager') || !method_exists('Elementor\\Images_Manager', 'get_lightbox_image_attributes')) { return; }

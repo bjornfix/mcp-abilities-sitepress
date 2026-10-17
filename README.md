@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.58](https://img.shields.io/badge/release-0.3.58-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.59](https://img.shields.io/badge/release-0.3.59-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.58 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.59 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -18,6 +18,8 @@ The plugin exposes 53 WordPress abilities for WPML language discovery, translati
 It can identify a translated service page that still links to the original contact page, show the linked replacement, and apply that replacement when requested. It can also distinguish a missing translation from an existing draft that can be reused.
 
 You can supply target string text and save it through WPML’s native writer. The plugin does not generate translations or judge whether a translated explanation suits its readers. Text comparisons identify material to review; they are not a language-quality score.
+
+Elementor’s existing signed public preview links also retain the previewed post’s WPML language. Editors can inspect an unpublished translation without publishing it or changing its language relationship.
 
 ## The Real Workflow
 
@@ -244,6 +246,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.59
+
+- Native signed Elementor public previews use the previewed post’s WPML language, including drafts in another language.
+- Existing Elementor signatures, expiry, revision selection, privacy headers and native rendering remain in use; ordinary public, admin, REST and CLI requests keep their own language.
 
 ### 0.3.58
 

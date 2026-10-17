@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.58
+Stable tag: 0.3.59
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.58 displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin also exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions.
+Version 0.3.59 displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin also exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -75,6 +75,8 @@ Use it to inspect translation mappings, create missing translation shells, run u
 
 Plugin page: https://devenia.com/plugins/mcp-abilities-sitepress/
 
+Elementor’s existing signed public previews use the previewed post’s WPML language, including unpublished translations. Existing signatures, expiry, revision checks and native rendering are retained.
+
 = Compatibility =
 
 * Requires WordPress 6.9 or newer
@@ -108,6 +110,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.59 =
+
+* Fixed: Native signed Elementor public previews retain the previewed post’s WPML language instead of the root URL’s default language.
+* Preserved: Existing token verification, expiry, revision selection, privacy headers, rendering and ordinary public/admin/REST/CLI language context.
 
 = 0.3.58 =
 

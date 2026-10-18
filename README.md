@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.61](https://img.shields.io/badge/release-0.3.61-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.62](https://img.shields.io/badge/release-0.3.62-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.61 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.62 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -231,7 +231,9 @@ The `[mcp_wpml_language_flag]` shortcode renders a linked flag from WPML languag
 
 Native Elementor Pro Gallery overlays, accessible image labels, attachment tooltips and lightbox title/description selections use the current language’s existing attachment text. Original image IDs, files, URLs, sizing, crops and native layout remain in use. The original Images Manager keeps its image-management hooks. Gallery text is treated as language-dependent dynamic content.
 
-When an attachment has no translated media record or a text field is still empty, its public source text is registered in WPML String Translation under **MCP Media Text**, with names such as `attachment-123-title`. Translate the selected field through the native String Translation interface or the existing string abilities. This does not create a media attachment or generate a translation. Original text remains visible until translated; incomplete work is not hidden. Existing nonempty public translated media fields take precedence, including when the embedded original image has an old unpublished parent. Unpublished source fields are not registered or looked up as public translation strings. The native WordPress attachment-title lookup also supplies retained-ID image tooltips, including custom-size Loop images. Ordinary post/page titles, explicitly filtered alternative titles, empty title choices, original-language output and raw admin, REST and WP-CLI reads are preserved.
+When an attachment has no translated media record or a text field is still empty, its public source text is registered in WPML String Translation under **MCP Media Text**, with names such as `attachment-123-title`. Translate the selected field through the native String Translation interface or the existing string abilities. This does not create a media attachment or generate a translation. Original text remains visible until translated; incomplete work is not hidden. Existing nonempty public translated media fields take precedence, including when the embedded original image has an old unpublished parent.
+
+An image explicitly selected by a native image or gallery widget in the current published document can also use String Translation for its public alt text despite an old unpublished attachment parent. This covers native Image, Image Box, Gallery, Image Gallery, Image Carousel, Media Carousel and G1 Text & Image Gallery selections. It does not register hidden private titles, captions or descriptions, unrelated images, decorative backgrounds, or content in draft, password-protected or preview documents. Ordinary unpublished source fields remain excluded. The native WordPress attachment-title lookup also supplies retained-ID image tooltips, including custom-size Loop images. Ordinary post/page titles, explicitly filtered alternative titles, empty title choices, original-language output and raw admin, REST and WP-CLI reads are preserved.
 
 ## Permissions and Limits
 
@@ -254,6 +256,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.62
+
+- Let the public alt text of explicitly selected native images and galleries use String Translation despite an old unpublished attachment parent.
+- Preserve hidden private metadata, document visibility, source storage, media identity and all existing permissions and abilities.
 
 ### 0.3.61
 

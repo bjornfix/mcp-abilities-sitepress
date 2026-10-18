@@ -11,7 +11,7 @@ namespace {
 	$GLOBALS['mcp_hooks'] = array(); $GLOBALS['mcp_lang'] = 'en';
 	$GLOBALS['mcp_strings'] = array(); $GLOBALS['mcp_registered'] = array();
 	class WP_Post {
-		public int $ID; public int $post_parent = 0; public string $post_type = 'attachment'; public string $post_status = 'inherit';
+		public int $ID; public int $post_parent = 0; public string $post_type = 'attachment'; public string $post_status = 'inherit'; public string $post_password = '';
 		public string $post_title; public string $post_excerpt; public string $post_content;
 		public function __construct(int $id, string $title, string $caption, string $description) {
 			$this->ID = $id; $this->post_title = $title; $this->post_excerpt = $caption; $this->post_content = $description;
@@ -45,11 +45,38 @@ namespace {
 	$GLOBALS['mcp_posts'][14]->post_parent = 111;
 	$GLOBALS['mcp_posts'][24] = new WP_Post(24, 'Public English media title', '', 'Public English description');
 	$GLOBALS['mcp_posts'][24]->post_parent = 113;
+	$GLOBALS['mcp_document'] = null;
+	$GLOBALS['mcp_preview'] = false;
+	$GLOBALS['mcp_elementor'] = array(
+		900 => array(array('id' => 'native-gallery', 'widgetType' => 'g1_text_gallery', 'settings' => array('images' => array(array('id' => 11))))),
+		901 => array(array('id' => 'native-image', 'widgetType' => 'image', 'settings' => array('image' => array('id' => 12)))),
+		902 => array(array('id' => 'draft-gallery', 'widgetType' => 'g1_text_gallery', 'settings' => array('images' => array(array('id' => 10))))),
+		903 => array(array('id' => 'decorative-background', 'elType' => 'container', 'settings' => array('background_image' => array('id' => 10)))),
+		904 => array(array('id' => 'unrelated-link', 'widgetType' => 'button', 'settings' => array('link' => array('id' => 10)))),
+		905 => array(array('id' => 'protected-gallery', 'widgetType' => 'g1_text_gallery', 'settings' => array('images' => array(array('id' => 10))))),
+		906 => array(array('id' => 'preview-gallery', 'widgetType' => 'g1_text_gallery', 'settings' => array('images' => array(array('id' => 10))))),
+		907 => array(array('id' => 'native-media-carousel', 'widgetType' => 'media-carousel', 'settings' => array('slides' => array(array('image' => array('id' => 11)))))),
+		908 => array(array('id' => 'native-multiple-gallery', 'widgetType' => 'gallery', 'settings' => array('gallery_type' => 'multiple', 'gallery' => array(array('id' => 10)), 'galleries' => array(array('multiple_gallery' => array(array('id' => 11))))))),
+		909 => array(array('id' => 'native-single-gallery', 'widgetType' => 'gallery', 'settings' => array('gallery_type' => 'single', 'gallery' => array(array('id' => 12)), 'galleries' => array(array('multiple_gallery' => array(array('id' => 10))))))),
+		930 => array(array('id' => 'invalid-gallery-type', 'widgetType' => 'gallery', 'settings' => array('gallery_type' => 'unsupported', 'gallery' => array(array('id' => 10))))),
+		931 => array(array('id' => 'empty-gallery-type', 'widgetType' => 'gallery', 'settings' => array('gallery_type' => '', 'gallery' => array(array('id' => 10))))),
+		932 => array(array('id' => 'null-gallery-type', 'widgetType' => 'gallery', 'settings' => array('gallery_type' => null, 'gallery' => array(array('id' => 10))))),
+	);
+	foreach (array_keys($GLOBALS['mcp_elementor']) as $id) {
+		$GLOBALS['mcp_posts'][$id] = new WP_Post($id, 'Document', '', '');
+		$GLOBALS['mcp_posts'][$id]->post_type = 'page';
+		$GLOBALS['mcp_posts'][$id]->post_status = 902 === $id ? 'draft' : 'publish';
+	}
+	$GLOBALS['mcp_posts'][905]->post_password = 'fixture-password';
 	$GLOBALS['mcp_meta'] = array(14 => 'Privater Alternativtext', 24 => 'Public English alt', 1 => 'Deutscher Alternativtext', 2 => 'English alt', 3 => 'Alternativtext ohne Medienpartner', 4 => 'Anderer Alternativtext', 7 => 'Alternativtext beibehalten', 8 => 'Original alt', 9 => '<img src=x onerror=bad()>Safe alt');
+	$GLOBALS['mcp_meta'] += array(10 => 'Privater Alternativtext ohne öffentliche Verwendung', 11 => 'Öffentlich verwendeter Bildalternativtext', 12 => 'Öffentlich verwendeter Alternativtext im Bild');
 	$GLOBALS['mcp_pairs'] = array(1 => 2, 2 => 1, 4 => 5, 8 => 9, 31 => 21, 32 => 22, 33 => 23, 14 => 24);
 	$GLOBALS['mcp_strings'] = array(
 		'attachment-3-title:en' => 'No separate media record', 'attachment-3-caption:en' => 'Caption without a separate media record',
 		'attachment-3-description:en' => 'Description without a separate media record', 'attachment-3-alt:en' => 'Alt without a separate media record',
+		'attachment-10-alt:en' => 'Unselected private alt must not become public',
+		'attachment-11-alt:en' => 'Publicly selected gallery image alt', 'attachment-11-caption:en' => 'Hidden private caption must not become public',
+		'attachment-12-alt:en' => 'Publicly selected native image alt',
 	);
 	function add_filter($name, $callback, $priority = 10, $accepted = 1) { $GLOBALS['mcp_hooks'][$name][$priority][] = array($callback, $accepted); return true; }
 	function add_action($name, $callback, $priority = 10, $accepted = 1) { return add_filter($name, $callback, $priority, $accepted); }
@@ -65,6 +92,8 @@ namespace {
 	function is_admin() { return 'admin' === $GLOBALS['mcp_test_mode']; }
 	function current_user_can(...$args) { return false; }
 	function get_post($id) { return isset($GLOBALS['mcp_posts'][$id]) ? clone $GLOBALS['mcp_posts'][$id] : null; }
+	function get_queried_object() { return $GLOBALS['mcp_document']; }
+	function is_preview() { return $GLOBALS['mcp_preview']; }
 	function is_post_publicly_viewable($post) {
 		$status = $post->post_status;
 		if ('inherit' === $status) { $parent = get_post($post->post_parent); $status = $parent ? $parent->post_status : 'publish'; }
@@ -72,6 +101,7 @@ namespace {
 	}
 	function get_the_title($id) { $post = get_post($id); return apply_filters('the_title', $post ? $post->post_title : '', $id); }
 	function get_post_meta($id, $key, $single = false) {
+		if ('_elementor_data' === $key) { return isset($GLOBALS['mcp_elementor'][$id]) ? json_encode($GLOBALS['mcp_elementor'][$id]) : ''; }
 		$filtered = apply_filters('get_post_metadata', null, $id, $key, $single);
 		if (null !== $filtered) { return $filtered; }
 		$value = $GLOBALS['mcp_meta'][$id] ?? '';
@@ -181,6 +211,35 @@ namespace {
 		$public_target = $gallery->native_call(14);
 		$assert($public_target['title'] === 'Public English media title' && $public_target['description'] === 'Public English description' && $public_target['alt'] === 'Public English alt', 'An old unpublished source parent blocked existing public translated media text.');
 		$assert($public_target['caption'] === 'Private Bildunterschrift ohne Zieltext' && !isset($GLOBALS['mcp_registered']['attachment-14-caption']) && !isset($GLOBALS['mcp_registered']['attachment-14-title']), 'Unpublished source text entered native public String Translation registration.');
+		$GLOBALS['mcp_document'] = get_post(900);
+		$public_image = $gallery->native_call(11);
+		$assert('Publicly selected gallery image alt' === $public_image['alt'], 'A private attachment parent blocked its actually public gallery image alt.');
+		$assert(isset($GLOBALS['mcp_registered']['attachment-11-alt']) && 'Öffentlich verwendeter Bildalternativtext' === $GLOBALS['mcp_registered']['attachment-11-alt']['value'], 'The public source alt was not registered through native String Translation.');
+		$assert('Geerbte Quelle' === $public_image['title'] && 'Geerbte Bildunterschrift' === $public_image['caption'] && 'Geerbte Beschreibung' === $public_image['description'], 'Selecting an image exposed a private title, caption or description translation.');
+		$assert(!isset($GLOBALS['mcp_registered']['attachment-11-title']) && !isset($GLOBALS['mcp_registered']['attachment-11-caption']) && !isset($GLOBALS['mcp_registered']['attachment-11-description']), 'Selecting an image registered hidden private metadata.');
+		$GLOBALS['mcp_document'] = get_post(907);
+		$assert('Publicly selected gallery image alt' === get_post_meta(11, '_wp_attachment_image_alt', true), 'The current native Media Carousel caller did not share the public-alt rule.');
+		$GLOBALS['mcp_document'] = get_post(901);
+		$assert('Publicly selected native image alt' === get_post_meta(12, '_wp_attachment_image_alt', true), 'The same public-alt rule did not cover the native Image caller.');
+		$GLOBALS['mcp_document'] = get_post(908);
+		$assert('Publicly selected gallery image alt' === get_post_meta(11, '_wp_attachment_image_alt', true), 'Native multiple Gallery selections did not qualify.');
+		$assert('Privater Alternativtext ohne öffentliche Verwendung' === get_post_meta(10, '_wp_attachment_image_alt', true) && !isset($GLOBALS['mcp_registered']['attachment-10-alt']), 'An inactive single Gallery selection exposed private alt text.');
+		$GLOBALS['mcp_document'] = get_post(909);
+		$assert('Publicly selected native image alt' === get_post_meta(12, '_wp_attachment_image_alt', true), 'Native single Gallery selections did not qualify.');
+		$assert('Privater Alternativtext ohne öffentliche Verwendung' === get_post_meta(10, '_wp_attachment_image_alt', true) && !isset($GLOBALS['mcp_registered']['attachment-10-alt']), 'An inactive multiple Gallery selection exposed private alt text.');
+		foreach (array(930, 931, 932) as $document_id) {
+			$GLOBALS['mcp_document'] = get_post($document_id);
+			$assert('Privater Alternativtext ohne öffentliche Verwendung' === get_post_meta(10, '_wp_attachment_image_alt', true) && !isset($GLOBALS['mcp_registered']['attachment-10-alt']), 'An explicitly invalid Gallery type enabled an inactive image selection.');
+		}
+		$GLOBALS['mcp_document'] = null;
+		$assert('Öffentlich verwendeter Bildalternativtext' === get_post_meta(11, '_wp_attachment_image_alt', true), 'A cached public image selection leaked into another rendering context.');
+		foreach (array(902, 903, 904, 905, 906) as $document_id) {
+			$GLOBALS['mcp_document'] = get_post($document_id);
+			$GLOBALS['mcp_preview'] = 906 === $document_id;
+			$assert('Privater Alternativtext ohne öffentliche Verwendung' === get_post_meta(10, '_wp_attachment_image_alt', true) && !isset($GLOBALS['mcp_registered']['attachment-10-alt']), 'A draft, preview, protected document, decorative background or unrelated ID exposed private alt text.');
+		}
+		$GLOBALS['mcp_document'] = null;
+		$GLOBALS['mcp_preview'] = false;
 		$public_inherited = $gallery->native_call(33);
 		$assert($public_inherited['title'] === 'Inherited English title', 'Public inherited attachment translation was rejected.');
 		$safe = $gallery->native_call(8); $assert($safe['title'] === 'Safe title' && $safe['caption'] === '<strong>Credit</strong>' && $safe['alt'] === 'Safe alt', 'Translated metadata bypassed native text/HTML sanitization.');

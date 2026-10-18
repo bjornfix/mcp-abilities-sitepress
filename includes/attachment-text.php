@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) { exit; }
 final class MCP_WPML_Attachment_Text {
 	private static bool $reading = false;
 	private static array $cache = array();
+	private static array $public_images = array();
 	const STRING_DOMAIN = 'MCP Media Text';
 
 	public static function frontend(): bool {
@@ -23,6 +24,54 @@ final class MCP_WPML_Attachment_Text {
 			'alt' => (string) get_post_meta($post->ID, '_wp_attachment_image_alt', true));
 	}
 
+	/** Only the alt of an image selected in the current public document is public. */
+	private static function public_image_selected(int $id): bool {
+		if (!function_exists('get_queried_object')) { return false; }
+		$document = get_queried_object();
+		if (!$document instanceof WP_Post || 'publish' !== $document->post_status || !is_post_publicly_viewable($document)
+			|| !empty($document->post_password) || (function_exists('is_preview') && is_preview())) { return false; }
+		if (!isset(self::$public_images[$document->ID])) {
+			$raw = get_post_meta($document->ID, '_elementor_data', true);
+			$data = is_string($raw) ? json_decode($raw, true) : $raw;
+			$ids = array();
+			if (is_array($data)) { self::collect_image_ids($data, $ids); }
+			self::$public_images[$document->ID] = $ids;
+		}
+		return isset(self::$public_images[$document->ID][$id]);
+	}
+
+	/** Read native image selections, never arbitrary IDs, links or decorative backgrounds. */
+	private static function collect_image_ids(array $elements, array &$ids): void {
+		$gallery_controls = array('g1_text_gallery' => 'images', 'image-gallery' => 'wp_gallery', 'image-carousel' => 'carousel', 'media-carousel' => 'slides');
+		foreach ($elements as $element) {
+			if (!is_array($element)) { continue; }
+			$settings = is_array($element['settings'] ?? null) ? $element['settings'] : array();
+			$type = is_string($element['widgetType'] ?? null) ? $element['widgetType'] : '';
+			$images = array();
+			if ('gallery' === $type) {
+				$mode = array_key_exists('gallery_type', $settings) ? $settings['gallery_type'] : 'single';
+				if ('single' === $mode && is_array($settings['gallery'] ?? null)) {
+					$images = $settings['gallery'];
+				} elseif ('multiple' === $mode && is_array($settings['galleries'] ?? null)) {
+					foreach ($settings['galleries'] as $gallery) {
+						if (is_array($gallery) && is_array($gallery['multiple_gallery'] ?? null)) { $images = array_merge($images, $gallery['multiple_gallery']); }
+					}
+				}
+			} elseif (in_array($type, array('image', 'image-box'), true)) {
+				$images = array($settings['image'] ?? array());
+			} elseif (isset($gallery_controls[$type]) && is_array($settings[$gallery_controls[$type]] ?? null)) {
+				$images = $settings[$gallery_controls[$type]];
+			}
+			foreach ($images as $image) {
+				if (!is_array($image)) { continue; }
+				foreach (array($image['id'] ?? 0, $image['attachment_id'] ?? 0, $image['image']['id'] ?? 0) as $candidate) {
+					if (is_numeric($candidate) && (int) $candidate > 0) { $ids[(int) $candidate] = true; }
+				}
+			}
+			if (is_array($element['elements'] ?? null)) { self::collect_image_ids($element['elements'], $ids); }
+		}
+	}
+
 	/** Translate text only. Never substitute an attachment ID, image URL, dimensions or file. */
 	public static function get(int $id): array {
 		$post = get_post($id);
@@ -38,7 +87,8 @@ final class MCP_WPML_Attachment_Text {
 			$details = mcp_wpml_lang_details($id, 'attachment');
 			$source_lang = $details ? (string) ($details->language_code ?? '') : '';
 			if (!is_string($lang) || '' === $lang || 'all' === $lang || '' === $source_lang || $lang === $source_lang) { return $source; }
-			$key = $id . ':' . $lang;
+			$public_alt = !$public_source && '' !== trim($source['alt']) && self::public_image_selected($id);
+			$key = $id . ':' . $lang . ':' . (int) $public_alt;
 			if (isset(self::$cache[$key])) { return self::$cache[$key]; }
 			$target_id = mcp_wpml_target_id_for_post_type($id, 'attachment', $lang);
 			$target = $target_id > 0 && $target_id !== $id ? get_post($target_id) : null;
@@ -53,7 +103,7 @@ final class MCP_WPML_Attachment_Text {
 					$safe = self::safe($field, $translated[$field]);
 					if ('' !== trim($safe)) { $result[$field] = $safe; continue; }
 				}
-				if (!$public_source || '' === trim($value)) { continue; }
+				if ('' === trim($value) || (!$public_source && !('alt' === $field && $public_alt))) { continue; }
 				// A missing media record/field uses WPML's existing String Translation store.
 				// Register the public source text, not a new attachment or page-specific overlay.
 				$name = 'attachment-' . $id . '-' . $field;

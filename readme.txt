@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.61
+Stable tag: 0.3.62
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.61 adds a bounded repair for misplaced Elementor thumbnail references without regenerating image files. It also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin also exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions.
+Version 0.3.62 lets publicly selected native image and gallery alt text use String Translation even when an old attachment parent is unpublished. Hidden private titles, captions and descriptions remain excluded. The plugin also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions, including bounded repair for misplaced Elementor thumbnail references without regenerating image files.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -110,6 +110,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.62 =
+* Fixed: The alt text of an image explicitly selected in the current published native image or gallery document can use String Translation despite an old unpublished attachment parent.
+* Preserved: Hidden private titles, captions and descriptions; draft, password-protected and preview documents; original media, permissions and raw source reads.
 
 = 0.3.61 =
 * Add a bounded repair mode for reviewed misplaced Elementor thumbnail entries, preserving original files and other image metadata.

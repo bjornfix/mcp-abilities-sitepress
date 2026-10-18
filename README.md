@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.63](https://img.shields.io/badge/release-0.3.63-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.64](https://img.shields.io/badge/release-0.3.64-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.63 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.64 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -53,6 +53,7 @@ Multilingual site editors, agencies maintaining WPML sites, and developers conne
 - An active, configured WPML SitePress installation. Native job administration and manual controls require WPML 4.7 or newer. These abilities are not registered without WPML.
 - An authenticated connection that exposes WordPress abilities to your assistant, such as [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/).
 - Matching WPML String Translation with its native string inventory API is required for string operations. The native API, factory, settings and translator capabilities must be available; missing APIs fail without an alternative query or access path.
+- MCP Expose Abilities with its translation-sibling guard is required for URL updates. Existing sibling content is preserved; missing protection refuses the update.
 - The matching plugin for optional operations: Elementor, Contact Form 7, Yoast SEO Premium, or Permalink Manager. These are not translation engines supplied by this plugin.
 
 ## Documentation
@@ -258,6 +259,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.64
+
+- Keep existing translated post content and native Elementor documents intact during URL-only saves.
+- Refuse URL updates when the MCP Expose Abilities translation guard is unavailable or has not captured every WPML sibling. Native slug uniqueness and old-slug history remain in use.
 
 ### 0.3.63
 

@@ -100,7 +100,34 @@ try {
  $r=$run('wpml/update-translated-post-url',array('id'=>$renamed,'target_lang'=>'fr','slug'=>get_post($occupied)->post_name));
  $check($r['success'] && $r['after_slug']===$expected_slug,'Native slug uniqueness was bypassed.');
  if ('publish'===get_post_status($renamed) && $before_slug!==$expected_slug) { $check(in_array($before_slug,get_post_meta($renamed,'_wp_old_slug',false),true),'Old slug history removed.'); }
- echo "PASS: native WordPress abilities, permissions, draft creation, content bytes and native slug policy; WPML integration uses fixture hooks\n";
+ // Exercise URL-only saves against actual WordPress post/meta storage and the
+ // existing content guard. The fixture hook models a synchronous WPML copy.
+ wp_update_post(wp_slash(array('ID'=>$target,'post_content'=>'<p>Reviewed French body</p>')),true);
+ update_post_meta($target,'_elementor_data',wp_slash('[{"id":"native-fr","settings":{"title":"Reviewed French gallery"}}]'));
+ update_post_meta($target,'_elementor_page_settings',array('hide_title'=>'yes'));
+ $sibling_content=get_post($target)->post_content;
+ $sibling_native=get_post_meta($target,'_elementor_data',true);
+ $sibling_settings=get_post_meta($target,'_elementor_page_settings',true);
+ $sync_copy=static function($id) use ($source,$target,$check) {
+  if ((int)$id!==$source) { return; }
+  $check(apply_filters('wpml_exclude_post_from_auto_translate',false,$source),'URL save did not exclude a new automatic translation job before saving.');
+  wp_update_post(wp_slash(array('ID'=>$target,'post_content'=>'<p>Unexpected source-language copy</p>')),true);
+  update_post_meta($target,'_elementor_data',wp_slash('[{"id":"wrong-language"}]'));
+  update_post_meta($target,'_elementor_page_settings',array('hide_title'=>'no'));
+ };
+ add_action('save_post',$sync_copy,9,1);
+ try {
+  $r=$run('wpml/update-translated-post-url',array('id'=>$source,'target_lang'=>'en','slug'=>'sitepress-guarded-fixture-'.$source));
+ } finally { remove_action('save_post',$sync_copy,9); }
+ $check($r['success'] && in_array($target,$r['translation_guard']['protected_post_ids'],true),'Native URL guard did not protect the real sibling.');
+ $check(get_post($target)->post_content===$sibling_content && get_post_meta($target,'_elementor_data',true)===$sibling_native && get_post_meta($target,'_elementor_page_settings',true)===$sibling_settings,'URL-only save changed sibling language/storage.');
+ $source_slug=get_post($source)->post_name;
+ $missing_guard=static function() { return array(); };
+ add_filter('mcp_expose_translation_sibling_post_ids',$missing_guard,999);
+ try { $r=$run('wpml/update-translated-post-url',array('id'=>$source,'target_lang'=>'en','slug'=>'must-not-be-written')); }
+ finally { remove_filter('mcp_expose_translation_sibling_post_ids',$missing_guard,999); }
+ $check(!$r['success'] && get_post($source)->post_name===$source_slug,'Missing sibling capture did not refuse the mutation.');
+ echo "PASS: native WordPress abilities, permissions, draft creation, content bytes, native slug policy and translation sibling language/storage preservation; WPML integration uses fixture hooks\n";
 } finally {
  foreach (array_unique($ids) as $id) { wp_delete_post($id,true); }
 }

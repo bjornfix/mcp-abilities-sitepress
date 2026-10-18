@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.63
+Stable tag: 0.3.64
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.63 translates the caption or title that native Elementor images use when stored alt text is empty. Empty stored alt fields, explicit alternative text and original image rendering are preserved. Publicly selected native image and gallery alt text can also use String Translation when an old attachment parent is unpublished. Hidden private titles, captions and descriptions remain excluded. The plugin also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions, including bounded repair for misplaced Elementor thumbnail references without regenerating image files.
+Version 0.3.64 preserves existing translated content and native Elementor documents during URL-only saves. URL updates require the MCP Expose Abilities translation-sibling guard and refuse missing protection. Native slug uniqueness and old-slug history remain in use. The plugin also translates the caption or title that native Elementor images use when stored alt text is empty. Empty stored alt fields, explicit alternative text and original image rendering are preserved. Publicly selected native image and gallery alt text can also use String Translation when an old attachment parent is unpublished. Hidden private titles, captions and descriptions remain excluded. The plugin also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin exposes 53 abilities for selected native WPML workflows with existing WordPress and WPML permissions, including bounded repair for misplaced Elementor thumbnail references without regenerating image files.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -110,6 +110,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.64 =
+* Fixed: URL-only saves preserve existing translated post content and native Elementor documents through the MCP Expose Abilities translation-sibling guard.
+* Preserved: Native WordPress slug uniqueness and old-slug history, WPML relationships and existing permissions. Missing guard protection refuses the URL update.
 
 = 0.3.63 =
 * Fixed: Native Elementor custom-size image alt fallbacks use the translated caption or title already stored in WPML.

@@ -143,6 +143,34 @@ function mcp_wpml_frontend_attachment_title($title, $id) {
 // Resolve the native attachment title before WordPress texturizes it; preserve explicit filtered titles.
 add_filter('the_title', 'mcp_wpml_frontend_attachment_title', 5, 2);
 
+/** Translate only the caption/title alt fallback already chosen by Elementor's native image renderer. */
+function mcp_wpml_elementor_fallback_alt($html, $settings, $image_size_key, $image_key) {
+	if (!is_string($html) || !is_array($settings) || !MCP_WPML_Attachment_Text::frontend()
+		|| MCP_WPML_Attachment_Text::reading() || !class_exists('WP_HTML_Tag_Processor')) { return $html; }
+	$key = $image_key ?: $image_size_key;
+	if (!is_string($key) || !is_array($settings[$key] ?? null)) { return $html; }
+	$id = $settings[$key]['id'] ?? 0;
+	if (!is_numeric($id) || (int) $id <= 0) { return $html; }
+	$post = get_post((int) $id);
+	if (!$post instanceof WP_Post || 'attachment' !== $post->post_type || !is_post_publicly_viewable($post)
+		|| get_post_meta((int) $id, '_wp_attachment_image_alt', true)) { return $html; }
+	$field = $post->post_excerpt ? 'caption' : 'title';
+	$source = 'caption' === $field ? $post->post_excerpt : $post->post_title;
+	// Compare decoded attribute values; the native HTML processor owns attribute escaping.
+	$native_source = WP_HTML_Decoder::decode_attribute(trim(\Elementor\Control_Media::sanitise_text($source)));
+	if ('' === $native_source) { return $html; }
+	$processor = new WP_HTML_Tag_Processor($html);
+	if (!$processor->next_tag('IMG') || $processor->get_attribute('alt') !== $native_source) { return $html; }
+	$text = MCP_WPML_Attachment_Text::get((int) $id);
+	if (!isset($text[$field]) || '' === trim($text[$field]) || $text[$field] === $source) { return $html; }
+	$translated = WP_HTML_Decoder::decode_attribute(trim(\Elementor\Control_Media::sanitise_text($text[$field])));
+	if ('' === $translated) { return $html; }
+	$processor->set_attribute('alt', $translated);
+	return $processor->get_updated_html();
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Native Elementor image-rendering seam.
+add_filter('elementor/image_size/get_attachment_image_html', 'mcp_wpml_elementor_fallback_alt', 20, 4);
+
 /** Keep native Images_Manager lifecycle hooks; adapt only its textual lightbox lookup. */
 function mcp_wpml_register_elementor_attachment_text(): void {
 	if (!defined('ICL_SITEPRESS_VERSION') || !class_exists('Elementor\\Plugin') || !class_exists('Elementor\\Images_Manager') || !method_exists('Elementor\\Images_Manager', 'get_lightbox_image_attributes')) { return; }

@@ -122,7 +122,10 @@ namespace {
 	add_filter('wpml_translate_single_string', static fn($value, $domain, $name, $lang) => $GLOBALS['mcp_strings'][$name . ':' . $lang] ?? $value, 10, 4);
 }
 namespace Elementor {
-	class Control_Media { public static function get_image_title($image) { return empty($image['id']) ? '' : \get_the_title($image['id']); } }
+	class Control_Media {
+		public static function get_image_title($image) { return empty($image['id']) ? '' : \get_the_title($image['id']); }
+		public static function sanitise_text($text) { return htmlspecialchars(strip_tags($text), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false); }
+	}
 	class Images_Manager {
 		public function __construct() { \add_action('wp_ajax_elementor_get_images_details', array($this, 'get_images_details')); }
 		public function get_images_details() { return 'native lifecycle'; }
@@ -166,6 +169,7 @@ namespace {
 	$source_before = serialize(array($GLOBALS['mcp_posts'], $GLOBALS['mcp_meta'], $GLOBALS['mcp_pairs']));
 	require getenv('MCP_WPML_TEST_ENTRY') ?: dirname(__DIR__) . '/mcp-abilities-sitepress.php';
 	do_action('elementor/init'); do_action('elementor/widgets/register', $manager);
+	if (getenv('MCP_WPML_TEST_BOOTSTRAP_ONLY')) { return; }
 	$checks = 0;
 	$assert = static function($condition, $message) use (&$checks) { $checks++; if (!$condition) { throw new \RuntimeException($message); } };
 	$gallery = $manager->get_widget_types('gallery'); $images = \Elementor\Plugin::$instance->images_manager;

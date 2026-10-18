@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.62](https://img.shields.io/badge/release-0.3.62-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.63](https://img.shields.io/badge/release-0.3.63-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.62 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.63 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -235,6 +235,8 @@ When an attachment has no translated media record or a text field is still empty
 
 An image explicitly selected by a native image or gallery widget in the current published document can also use String Translation for its public alt text despite an old unpublished attachment parent. This covers native Image, Image Box, Gallery, Image Gallery, Image Carousel, Media Carousel and G1 Text & Image Gallery selections. It does not register hidden private titles, captions or descriptions, unrelated images, decorative backgrounds, or content in draft, password-protected or preview documents. Ordinary unpublished source fields remain excluded. The native WordPress attachment-title lookup also supplies retained-ID image tooltips, including custom-size Loop images. Ordinary post/page titles, explicitly filtered alternative titles, empty title choices, original-language output and raw admin, REST and WP-CLI reads are preserved.
 
+When native Elementor image rendering falls back from an empty alt field to a caption or title, the same existing translated field supplies that fallback. Stored alt fields remain empty, explicitly chosen alternatives are preserved, and the original image HTML is retained apart from the translated alt value. This also covers custom-size images in native Posts cards.
+
 ## Permissions and Limits
 
 The ability permission check and the affected post's permission both apply. Administrative recovery and translation linking require `manage_options`; media operations also require media permissions. When String Translation is active, manual controls also require its native string-management or translation-management capability. New administration controls require `manage_options`; string and local-job controls additionally enforce WPML’s existing management capabilities. Term and post writes also require edit access to the affected items. Optional APIs must be available, and native denial is preserved. A connected assistant inherits the WordPress user's access.
@@ -256,6 +258,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.63
+
+- Translate the native caption/title alt fallback of Elementor images, including custom-size Posts thumbnails.
+- Preserve empty stored alt fields, explicit alternatives, media identity, native markup, original-language output and raw administrative reads.
 
 ### 0.3.62
 

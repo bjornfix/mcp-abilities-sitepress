@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.64](https://img.shields.io/badge/release-0.3.64-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.65](https://img.shields.io/badge/release-0.3.65-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.64 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.65 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -81,7 +81,7 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/get-registration-status` | Read Installer availability and site-key presence; license validity is not checked |
 | `wpml/get-registration-workflow` | Locate the secure native registration screen without accepting or returning keys |
 | `wpml/list-strings` | Read a bounded content-string domain through the existing native WPML API |
-| `wpml/get-string` | Read one selected content string and its translations |
+| `wpml/get-string` | Read one selected registered string and its translations |
 | `wpml/update-string-translation` | Preview or save target text through WPML with reviewed source and target hashes |
 | `wpml/list-local-translators` | List existing qualified translators for an exact active language pair |
 | `wpml/assign-local-translation-job` | Preview or assign a current waiting local manual job to an existing translator |
@@ -200,7 +200,7 @@ Term controls use public WPML hooks and the term’s taxonomy ID internally. Bot
 
 Read `wpml/get-general-settings` to obtain the current selected values and their `settings_hash`. Preview `wpml/update-general-settings` with the requested `changes`, then confirm using that hash as `expected_settings_hash`. The allowlist covers page order, parent, template, ping/comment status, sticky flag, post format/date, term retranslation blocking and translated-page slug mode. It does not accept raw WPML options, domains, roles or account settings.
 
-### Content strings and local translator work
+### Registered strings and local translator work
 
 List a selected domain through `wpml/list-strings`:
 
@@ -208,7 +208,7 @@ List a selected domain through `wpml/list-strings`:
 {"domain": "my-theme", "source_language": "en", "target_language": "fr", "limit": 25}
 ```
 
-The existing native WPML API validates the current user’s string-management capabilities and REST nonce. Results are bounded and do not claim a total when the API supplies only a page. Registered `admin_texts_*` option-string domains remain in the native secure UI.
+The existing native WPML API validates the current user’s string-management capabilities and REST nonce. Results are bounded and do not claim a total when the API supplies only a page. For a registered `admin_texts_*` option-string domain, add `"include_option_strings": true` to list, get and update calls. Select the exact domain and ID. Native administrator and String Translation permissions remain required. This reads registered native strings rather than arbitrary WordPress option values.
 
 Read `wpml/get-string` using the selected ID and domain. Preview `wpml/update-string-translation` with the target text and state:
 
@@ -259,6 +259,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.65
+
+Read and translate explicitly selected registered option-string domains through the same native WPML APIs as content strings. Preserve original values, reviewed source/target hashes, native permissions and active job progress.
 
 ### 0.3.64
 

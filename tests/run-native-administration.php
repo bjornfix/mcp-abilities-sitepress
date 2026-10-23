@@ -19,7 +19,7 @@ function run($name, $input = array()) {
 	check(!str_contains((string) json_encode($out), 'FIXTURE_SECRET'), 'A secret or raw native error was returned.');
 	return $out;
 }
-check(24 === count($abilities), 'Expected six prior and eighteen new administration abilities.');
+check(25 === count($abilities), 'Expected twenty-five native administration abilities.');
 $fixture_caps['manage_options'] = false;
 foreach ($abilities as $a) { check(!$a['permission_callback'](), 'Non-administrator got native administration access.'); }
 $fixture_caps['manage_options'] = true;

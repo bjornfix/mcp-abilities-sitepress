@@ -103,6 +103,63 @@ function mcp_wpml_update_string_translation($input = array()) {
 	} catch (Throwable $error) { return new WP_Error('mcp_wpml_string_write_failed', 'A native string operation failed. Re-read the selected string to check partial changes.'); }
 }
 
+/** Fingerprint every native translation field without returning private row metadata. */
+function mcp_wpml_string_translation_rows_hash(iterable $translations): string {
+	$rows = array();
+	foreach ($translations as $translation) {
+		$row = (array) $translation;
+		foreach ($row as $key => $value) {
+			if (null !== $value && !is_scalar($value)) { throw new RuntimeException('Unexpected native translation field.'); }
+			$row[$key] = array('type' => gettype($value), 'value' => is_string($value) ? base64_encode($value) : $value);
+		}
+		ksort($row);
+		$encoded = wp_json_encode($row);
+		if (false === $encoded) { throw new RuntimeException('Native translation fields could not be fingerprinted.'); }
+		$rows[] = $encoded;
+	}
+	sort($rows, SORT_STRING);
+	return hash('sha256', (string) wp_json_encode($rows));
+}
+
+/** Correct source language through WPML; preserve text/translation rows and native status calculation. */
+function mcp_wpml_update_string_source_language($input = array()) {
+	if (!current_user_can('manage_options') || !mcp_wpml_string_management_allowed()) { return new WP_Error('mcp_wpml_permission_denied', 'Native administrator and String Translation permissions are required.'); }
+	$write_attempted = false;
+	try {
+		$id = (int) ($input['id'] ?? 0);
+		$options = true === ($input['include_option_strings'] ?? false);
+		$before = mcp_wpml_string_state($id, (string) ($input['domain'] ?? ''), $options);
+		$language = (string) ($input['source_language'] ?? '');
+		$languages = mcp_wpml_site_languages();
+		if (!in_array($language, $languages['active_codes'], true)) { return new WP_Error('mcp_wpml_invalid_language', 'Select an active native source language.'); }
+		$active_statuses = array(ICL_TM_WAITING_FOR_TRANSLATOR, ICL_TM_IN_PROGRESS);
+		if (defined('ICL_STRING_TRANSLATION_PARTIAL')) { $active_statuses[] = constant('ICL_STRING_TRANSLATION_PARTIAL'); }
+		$string = \WPML\Container\make('WPML_ST_String_Factory')->find_by_id($id);
+		if (!is_callable(array($string, 'set_language'))) { return new WP_Error('mcp_wpml_string_writer_unavailable', 'Native source-language writer is unavailable.'); }
+		$translation_rows = $string->get_translations();
+		foreach ($translation_rows as $translation) {
+			$translation = (array) $translation;
+			if (in_array((int) ($translation['status'] ?? 0), $active_statuses, true)) { return new WP_Error('mcp_wpml_string_job_active', 'Preserve active or partial native string translation work before changing its source language.'); }
+		}
+		$translations_hash = mcp_wpml_string_translation_rows_hash($translation_rows);
+		if (true !== ($input['confirm'] ?? false)) {
+			return array('success' => true, 'applied' => false, 'before' => $before, 'translations_hash' => $translations_hash, 'proposed_source_language' => $language, 'native_status_recalculation' => true);
+		}
+		if (($input['expected_source_hash'] ?? '') !== $before['source_hash'] || ($input['expected_translations_hash'] ?? '') !== $translations_hash) { return new WP_Error('mcp_wpml_stale_string', 'The source or its translations changed after review.'); }
+		if ($language === $before['source']['language']) { return array('success' => true, 'applied' => false, 'unchanged' => true); }
+		$write_attempted = true;
+		$string->set_language($language);
+		$after = mcp_wpml_string_state($id, $before['source']['domain'], $options);
+		$expected = $before['source']; $expected['language'] = $language;
+		$after_hash = mcp_wpml_string_translation_rows_hash($string->get_translations());
+		$verified = $after['source'] === $expected && hash_equals($translations_hash, $after_hash);
+		return array('success' => $verified, 'applied' => true, 'before' => $before, 'after' => $after, 'translations_hash' => $after_hash,
+			'native_status_recalculation' => true, 'message' => $verified ? '' : 'Native readback differs. Inspect the selected string before another write.');
+	} catch (Throwable $error) {
+		return new WP_Error('mcp_wpml_string_language_write_failed', 'Native source-language update failed. Re-read the selected string before another write.', array('outcome' => $write_attempted ? 'uncertain' : 'not_started'));
+	}
+}
+
 function mcp_wpml_register_string_administration_abilities(): void {
 	$domain = array('type' => 'string', 'minLength' => 1, 'maxLength' => 160);
 	$id = array('type' => 'integer', 'minimum' => 1);
@@ -113,6 +170,7 @@ function mcp_wpml_register_string_administration_abilities(): void {
 	mcp_wpml_register_native_admin_definitions(array(
 		'list-strings' => array('List WPML Strings', 'Read a bounded selected native string domain using the existing WPML API and current permissions. Registered option domains require explicit selection.', 'mcp_wpml_list_strings', array('domain' => $domain, 'include_option_strings' => $options, 'search' => array('type' => 'string', 'maxLength' => 200), 'source_language' => $lang, 'target_language' => $lang, 'limit' => array('type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 25), 'offset' => array('type' => 'integer', 'minimum' => 0, 'default' => 0)), array('domain'), true, false, true, $permission),
 		'get-string' => array('Get WPML String', 'Read one selected registered string and its native translations. Registered option domains require explicit selection; raw options are never read.', 'mcp_wpml_get_string', array('id' => $id, 'domain' => $domain, 'include_option_strings' => $options), array('id', 'domain'), true, false, true, $permission),
+		'update-string-source-language' => array('Update String Source Language', 'Preview or correct the language of one selected registered source string using native WPML. Preserve its value, translations and active work; require reviewed source and translation hashes.', 'mcp_wpml_update_string_source_language', array('id' => $id, 'domain' => $domain, 'include_option_strings' => $options, 'source_language' => $lang, 'expected_source_hash' => $hash, 'expected_translations_hash' => $hash, 'confirm' => array('type' => 'boolean', 'default' => false)), array('id', 'domain', 'source_language'), false, true, true, $permission),
 		'update-string-translation' => array('Update String Translation', 'Preview or save selected content or explicitly selected registered option translation text using native WPML. Require reviewed hashes and preserve active job progress.', 'mcp_wpml_update_string_translation', array('id' => $id, 'domain' => $domain, 'include_option_strings' => $options, 'target_language' => $lang, 'value' => array('type' => 'string', 'maxLength' => 200000), 'state' => array('type' => 'string', 'enum' => array('draft', 'complete'), 'default' => 'draft'), 'expected_source_hash' => $hash, 'expected_target_hash' => $hash, 'confirm' => array('type' => 'boolean', 'default' => false)), array('id', 'domain', 'target_language', 'value'), false, true, true, $permission),
 	));
 }

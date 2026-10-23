@@ -38,7 +38,8 @@ namespace {
   public function get_context() { return 'admin_texts_plugin_locator'; }
   public function get_gettext_context() { return ''; }
   public function get_name() { return '[plugin_locator][phone_label]'; }
-  public function get_language() { return 'nb'; }
+  public function get_language() { return $GLOBALS['source_language'] ?? 'nb'; }
+  public function set_language($language) { ++$GLOBALS['language_writes']; $GLOBALS['source_language'] = $language; }
   public function get_value() { return 'Telefon'; }
   public function get_translations() { return $GLOBALS['translations']; }
   public function normalize_line_breaks($text) { return $text; }
@@ -76,6 +77,19 @@ namespace {
  check($saved['success'] && $writes === 1 && $saved['after']['translations']['en']['value'] === 'Phone' && $saved['after']['source']['value'] === 'Telefon', 'native target writer preserves original string and verifies saved translation');
  $translations['en']['status'] = ICL_TM_IN_PROGRESS;
  check(is_wp_error(mcp_wpml_update_string_translation($request)) && $writes === 1, 'active option-string translation job is preserved');
- check(count($definitions) === 3 && isset($definitions['get-string'][3]['include_option_strings']), 'same public native string abilities expose the new selection');
+ check(count($definitions) === 4 && isset($definitions['get-string'][3]['include_option_strings']), 'native string abilities expose explicit option-string selection and source-language correction');
+ $translations['en']['status'] = ICL_TM_COMPLETE;
+ $source_language = 'en'; $language_writes = 0;
+ $language_request = $input + array('id' => 21, 'source_language' => 'nb');
+ $language_preview = mcp_wpml_update_string_source_language($language_request);
+ check($language_preview['success'] && !$language_preview['applied'] && $language_writes === 0, 'source-language preview preserves value and all translations');
+ $language_save = $language_request + array('confirm' => true, 'expected_source_hash' => $language_preview['before']['source_hash'], 'expected_translations_hash' => $language_preview['translations_hash']);
+ $stale = $language_save; $stale['expected_translations_hash'] = str_repeat('0',64);
+ check(is_wp_error(mcp_wpml_update_string_source_language($stale)) && $language_writes === 0, 'source-language correction rejects a stale translation set');
+ $translations['en']['status'] = ICL_TM_IN_PROGRESS;
+ check(is_wp_error(mcp_wpml_update_string_source_language($language_request)) && $language_writes === 0, 'source-language correction preserves active translation work');
+ $translations['en']['status'] = ICL_TM_COMPLETE;
+ $language_result = mcp_wpml_update_string_source_language($language_save);
+ check($language_result['success'] && $language_writes === 1 && $language_result['after']['source']['language'] === 'nb' && $language_result['after']['source']['value'] === 'Telefon' && $language_result['after']['translations'] === $language_preview['before']['translations'], 'native language setter changes only source language metadata');
  echo $count . " option-string contracts passed.\n";
 }

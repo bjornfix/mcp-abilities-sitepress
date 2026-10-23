@@ -2,18 +2,18 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.65](https://img.shields.io/badge/release-0.3.65-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.66](https://img.shields.io/badge/release-0.3.66-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.65 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.66 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
 ## What It Does
 
-The plugin exposes 53 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
+The plugin exposes 54 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
 
 It can identify a translated service page that still links to the original contact page, show the linked replacement, and apply that replacement when requested. It can also distinguish a missing translation from an existing draft that can be reused.
 
@@ -82,6 +82,7 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/get-registration-workflow` | Locate the secure native registration screen without accepting or returning keys |
 | `wpml/list-strings` | Read a bounded content-string domain through the existing native WPML API |
 | `wpml/get-string` | Read one selected registered string and its translations |
+| `wpml/update-string-source-language` | Preview or correct a selected string's source language with reviewed source and translation hashes |
 | `wpml/update-string-translation` | Preview or save target text through WPML with reviewed source and target hashes |
 | `wpml/list-local-translators` | List existing qualified translators for an exact active language pair |
 | `wpml/assign-local-translation-job` | Preview or assign a current waiting local manual job to an existing translator |
@@ -218,6 +219,14 @@ Read `wpml/get-string` using the selected ID and domain. Preview `wpml/update-st
 
 Use the returned `before.source_hash` as `expected_source_hash` and `target_hash` as `expected_target_hash`, then set `confirm` to true after reviewing the exact operation. Both hashes must still match. Native waiting and in-progress/partial targets are preserved. States are draft or complete. WPML retains its line-break normalization, link handling and translation-file lifecycle. The response verifies saved text and returns the actual selected values; unexpected native adjustments require review.
 
+If an existing string was registered in the wrong source language, preview `wpml/update-string-source-language` before translating it:
+
+```json
+{"id": 456, "domain": "my-theme", "source_language": "en"}
+```
+
+Confirm with the returned `before.source_hash` as `expected_source_hash`, `translations_hash` as `expected_translations_hash`, and `confirm: true`. Select an active source language. Native administrator and String Translation permissions are required, including for ordinary content strings. Waiting, in-progress and partial translation work blocks the correction. WPML's native language setter retains the source text and all translation rows, recalculates aggregate status and invalidates its string cache. The response verifies source identity, text and translation rows. This operation changes only the selected registered string; it does not change the site's default language or registered option values. Re-read the string before retrying an uncertain or failed write.
+
 `wpml/list-local-translators` reads existing translators for an exact active language pair. Assignment accepts only current waiting local manual post jobs and the reviewed `expected_job_hash`. Started, completed, ATE, automatic and external work is preserved. First-job creation requires ATE disabled, Translate Everything off, an editable original post in a translated post type, a qualified existing translator and the reviewed `expected_source_hash`. Existing target relationships, target content and native current/history jobs block resend because WPML resend can cancel earlier progress. These operations do not grant translator roles or language pairs, and do not dispatch string/package, external or automatic jobs. Native configured job notifications may be sent when an assignment or creation is confirmed. Coordinate edits to the same item: the native APIs do not provide an atomic transaction with concurrent WordPress UI changes.
 
 ### Diagnostics and secure registration
@@ -259,6 +268,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.66
+
+Correct an existing registered string's source language through WPML's native language setter. Require an active language, native management permissions and reviewed source/translation hashes. Preserve text, translation metadata and active work; verify the saved result and retain native status and cache handling.
 
 ### 0.3.65
 

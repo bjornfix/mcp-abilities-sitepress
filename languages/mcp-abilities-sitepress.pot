@@ -1,0 +1,20 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MCP Abilities - SitePress 0.3.68\n"
+"Report-Msgid-Bugs-To: https://devenia.com/plugins/mcp-abilities-sitepress/\n"
+"POT-Creation-Date: 2026-10-24 00:00+0000\n"
+"PO-Revision-Date: 2026-10-24 00:00+0000\n"
+"Last-Translator: basicus\n"
+"Language-Team: LANGUAGE\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: mcp-abilities-sitepress\n"
+
+#. translators: %s: Maximum upload size supplied by Formidable Pro.
+#: includes/public-file-helper-language.php
+#, php-format
+msgid "Maximum file size: %s"
+msgstr ""

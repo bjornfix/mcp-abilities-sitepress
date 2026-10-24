@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.67
+Stable tag: 0.3.68
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -113,6 +113,9 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.68 =
+* Use the WordPress locale and standard translation catalogs for the optional missing Formidable file helper; preserve existing translations and every other domain.
 
 = 0.3.67 =
 * Translate the missing Norwegian Formidable Pro file-size helper while preserving existing translations, the size placeholder and English output.

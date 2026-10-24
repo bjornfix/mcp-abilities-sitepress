@@ -17,7 +17,8 @@ foreach (['nb_NO', 'en_US'] as $locale) {
         $checks[$locale . ' without catalog retains original'] = mcp_wpml_public_file_helper_language($source, $source, 'formidable-pro') === $source;
         if ($locale === 'nb_NO') {
             global $wp_textdomain_registry;
-            $wp_textdomain_registry->set_custom_path($domain, dirname($catalog));
+            // Replace the process-local path already cached from the active plugin header.
+            $wp_textdomain_registry->set($domain, $locale, dirname($catalog));
             unload_textdomain($domain, true);
         }
         $expected = $locale === 'nb_NO' ? 'Maksimal filstørrelse: %s' : $source;

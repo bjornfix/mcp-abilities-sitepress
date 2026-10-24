@@ -16,10 +16,12 @@ foreach (['nb_NO', 'en_US'] as $locale) {
         unload_textdomain($domain, true);
         $checks[$locale . ' without catalog retains original'] = mcp_wpml_public_file_helper_language($source, $source, 'formidable-pro') === $source;
         if ($locale === 'nb_NO') {
-            $checks['Native WordPress catalog loads'] = load_textdomain($domain, $catalog, $locale);
+            global $wp_textdomain_registry;
+            $wp_textdomain_registry->set_custom_path($domain, dirname($catalog));
+            unload_textdomain($domain, true);
         }
         $expected = $locale === 'nb_NO' ? 'Maksimal filstørrelse: %s' : $source;
-        $checks[$locale . ' configured catalog result'] = mcp_wpml_public_file_helper_language($source, $source, 'formidable-pro') === $expected;
+        $checks[$locale . ' automatic native catalog result'] = mcp_wpml_public_file_helper_language($source, $source, 'formidable-pro') === $expected;
         $checks[$locale . ' existing translation preserved'] = mcp_wpml_public_file_helper_language('Existing native translation', $source, 'formidable-pro') === 'Existing native translation';
         $checks[$locale . ' other domain preserved'] = mcp_wpml_public_file_helper_language($source, $source, 'other-domain') === $source;
         if ($locale === 'nb_NO') {

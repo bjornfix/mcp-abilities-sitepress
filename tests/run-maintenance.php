@@ -54,6 +54,20 @@ foreach($abilities as $a){check(false===$a['input_schema']['additionalProperties
 check(array('hidden','confirm','expected_state_hash')===array_keys($abilities['wpml/set-pricing-notice-hidden']['input_schema']['properties']),'Arbitrary notice/callback input introduced');
 // Provider data projection must never return raw repository/account data.
 class FixtureInstaller {public function get_repositories(){return array('wpml'=>array('channel'=>'stable','site_key'=>'SECRET_KEY','products'=>array('sitepress-multilingual-cms'=>array('version'=>'5.2.0','download'=>'SECRET_DOWNLOAD'))));}public function get_repository($name){return array();}}
-function WP_Installer(){return new FixtureInstaller();}function get_site_transient($name){return (object)array('response'=>array());}
+function WP_Installer(){return $GLOBALS['fixture_installer']??new FixtureInstaller();}function WP_Installer_Channels(){return $GLOBALS['fixture_channels']??null;}function wp_remote_get(...$args){throw new RuntimeException('No external provider call allowed in cached status test');}function wp_update_plugins(){throw new RuntimeException('No update refresh allowed in cached status test');}function get_site_transient($name){return (object)array('response'=>array());}
 $r=call_ability('get-update-channel-status');check('5.2.0'===$r['native_feed_core_version']&&'stable'===$r['channel']&&'not_established'===$r['provider_health'],'Commercial feed projection wrong');
+$installer_source=getenv('MCP_WPML_INSTALLER_DIR');
+if ($installer_source) {
+ define('MONTH_IN_SECONDS',2592000);
+ require $installer_source.'/class-wp-installer.php';require $installer_source.'/class-wp-installer-channels.php';require $installer_source.'/settings-native.php';require $installer_source.'/subscription-native.php';
+ $options['wp_installer_settings_common']=array('repositories'=>array('wpml'=>array('channel'=>'production','using_products_fallback'=>true,'subscription'=>array('key'=>'SECRET_KEY','site_url'=>'SECRET_URL','data'=>(object)array('status'=>4)))));
+ $native_class=new ReflectionClass('WP_Installer');$fixture_installer=$native_class->newInstanceWithoutConstructor();
+ $native_class->getProperty('repositories')->setValue($fixture_installer,array('wpml'=>array('api-url'=>'https://api.wpml.org')));
+ $native_class->getProperty('settings')->setValue($fixture_installer,array('repositories'=>array('wpml'=>array('data'=>array('downloads'=>array('plugins'=>array('wpml'=>array('slug'=>'sitepress-multilingual-cms','version'=>'5.2.0','url'=>'SECRET_DOWNLOAD'))))))));
+ $fixture_channels=(new ReflectionClass('WP_Installer_Channels'))->newInstanceWithoutConstructor();
+ $before=$writes;$r=call_ability('get-update-channel-status',array('refresh'=>false));
+ check('5.2.0'===$r['native_feed_core_version']&&'production'===$r['channel']&&$r['native_cached_feed_inspected'],'Actual native product/channel getters not used');
+ check(true===$r['native_using_fallback_feed']&&true===$r['cached_subscription_valid'],'Actual cached native status booleans lost');
+ check(false===$r['fresh_provider_request_performed']&&$before===$writes,'Cached read refreshed provider or changed stored native settings');
+}
 echo "PASS: {$checks} fixed-target/native Unnotifier hide, renderer, restore, human choice, idempotence, partial failure, redaction, schema and permission assertions\n";

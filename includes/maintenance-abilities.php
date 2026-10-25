@@ -216,13 +216,19 @@ function mcp_wpml_get_update_channel_status($input = array()): array {
 	try {
 		$installer = function_exists('WP_Installer') ? WP_Installer() : null;
 		$support = array();
-		foreach (array('get_repository','get_repositories','get_settings','refresh_repositories_data','refresh_repo_data','get_last_error','get_update_channel') as $method) {
+		foreach (array('get_repository','get_repositories','get_settings','refresh_repositories_data','refresh_repo_data','get_last_error','get_update_channel','get_product_data','repository_has_valid_subscription') as $method) {
 			$support[$method] = is_object($installer) && method_exists($installer,$method) && is_callable(array($installer,$method)) ? (new ReflectionMethod($installer,$method))->getNumberOfRequiredParameters() : null;
 		}
 		$native = null;
 		if (0 === $support['get_repositories']) { $all = $installer->get_repositories(); $native = is_array($all) ? ($all['wpml'] ?? null) : null; }
 		elseif (1 === $support['get_repository']) { $native = $installer->get_repository('wpml'); }
-		$channel = is_array($native) ? ($native['channel'] ?? $native['update_channel'] ?? 'unknown') : 'unknown';
+		// Public native cached getters: no repository refresh, subscription fetch or HTTP is invoked.
+		$downloads = 2 === ($support['get_product_data'] ?? null) ? $installer->get_product_data('wpml','downloads') : null;
+		$channels = function_exists('WP_Installer_Channels') ? WP_Installer_Channels() : null;
+		$channel = is_object($channels) && is_callable(array($channels,'get_channel')) ? $channels->get_channel('wpml')
+			: (is_array($native) ? ($native['channel'] ?? $native['update_channel'] ?? 'unknown') : 'unknown');
+		$fallback = is_callable(array('OTGS\\Installer\\Settings','is_using_products_fallback')) ? \OTGS\Installer\Settings::is_using_products_fallback('wpml') : null;
+		$valid = 1 === ($support['repository_has_valid_subscription'] ?? null) ? (bool) $installer->repository_has_valid_subscription('wpml') : null;
 		if (!in_array($channel,array('stable','production','beta','development'),true)) { $channel='unknown'; }
 		if (!empty($input['refresh'])) {
 			$GLOBALS['mcp_wpml_observe_update_http'] = true;
@@ -232,10 +238,12 @@ function mcp_wpml_get_update_channel_status($input = array()): array {
 		$offered = is_object($offer) && preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:[-.][A-Za-z0-9]+)*$/D',(string)($offer->new_version??'')) ? $offer->new_version : null;
 		$http = get_transient('mcp_wpml_update_channel_observation');
 		return array('success'=>true,'installed_version'=>ICL_SITEPRESS_VERSION,'provider'=>'wpml','native_installer_available'=>is_object($installer),
-			'native_api_support'=>$support,'channel'=>$channel,'native_feed_core_version'=>mcp_wpml_installer_core_version($native),'wordpress_offered_version'=>$offered,
-			'refresh_requested'=>!empty($input['refresh']),'last_native_http_check'=>is_array($http)?$http:null,
+			'native_api_support'=>$support,'channel'=>$channel,'native_feed_core_version'=>mcp_wpml_installer_core_version(is_array($downloads)?$downloads:$native),'wordpress_offered_version'=>$offered,
+			'native_cached_feed_inspected'=>is_array($downloads),'native_using_fallback_feed'=>is_bool($fallback)?$fallback:null,
+			'cached_subscription_valid'=>$valid,'provider_auto_update_checks_disabled'=>defined('OTGS_DISABLE_AUTO_UPDATES') && (bool) OTGS_DISABLE_AUTO_UPDATES,
+			'fresh_provider_request_performed'=>!empty($input['refresh'])?null:false,'refresh_requested'=>!empty($input['refresh']),'last_native_http_check'=>is_array($http)?$http:null,
 			'native_repository_inspected'=>is_array($native),'provider_response_observed'=>is_array($http),'provider_health'=>'not_established','account_data_returned'=>false,
-			'note'=>'Native repository and observed update-check metadata only. A missing WordPress offer does not establish license validity, staged rollout or provider health. No registration, billing or download action is performed.');
+			'note'=>'Native cached product/channel/subscription booleans and observed update-check metadata only; cached validity is not live subscription validation. A missing WordPress offer does not establish license validity, staged rollout or provider health. No registration, billing or download action is performed.');
 	} catch (Throwable $error) { return array('success'=>false,'code'=>'native_update_channel_status_unavailable','account_data_returned'=>false); }
 }
 

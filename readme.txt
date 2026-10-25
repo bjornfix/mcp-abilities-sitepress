@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.74
+Stable tag: 0.3.75
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -120,6 +120,9 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.75 =
+* Read cached native Installer product/channel metadata, fallback and validity booleans through verified native getters. No provider refresh or account data is needed for this status projection.
 
 = 0.3.74 =
 * Add fixed-target, reversible pricing-notice hiding through native Unnotifier individual mode and normal administrator rendering. Preserve all other notices, unknown settings and human restore choices.

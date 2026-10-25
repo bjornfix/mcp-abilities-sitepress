@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.74](https://img.shields.io/badge/release-0.3.74-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.75](https://img.shields.io/badge/release-0.3.75-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.74 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.75 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -278,9 +278,13 @@ The pricing-notice Interface has one fixed target: the standalone WPML pricing-u
 
 Native global preferences make the selected target apply to its normal audience. `visibility_verified` remains false until an actual native render proves before/after visibility and unchanged other records. Setting `hidden: false` restores only entries owned by this Adapter. A human restore in Unnotifier takes precedence and disables automatic re-hiding. Native storage failure returns partial readback; unknown settings and other preferences are preserved. Raw notices, nonces and user identities are never returned.
 
-Commercial update status requires `manage_options` and `update_plugins`. It projects only known native Installer capability counts, channel/version enums and optional safe observations of normal WordPress update checks. No keys, account details, raw feeds, registration, downloads or billing actions are exposed. A missing update offer does not establish license validity, staged rollout or provider health.
+Commercial update status requires `manage_options` and `update_plugins`. It projects only known native Installer capability counts, locally cached product version/channel, fallback and subscription-validity booleans and optional safe observations of normal WordPress update checks. No keys, account details, raw feeds, registration, downloads or billing actions are exposed. A missing update offer does not establish license validity, staged rollout or provider health.
 
 ## Recent Changes
+
+### 0.3.75
+
+Read the actual cached native Installer product/channel Interface instead of treating repository configuration as its product feed. Report fallback and cached validity booleans without refreshing the provider or exposing account details.
 
 ### 0.3.74
 

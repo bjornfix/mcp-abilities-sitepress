@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.72
+Stable tag: 0.3.73
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -117,6 +117,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.73 =
+* Use the native document-editor ATE value, distinct from the lowercase job-editor enum.
+* Require effective ATE readback before confirming an Advanced editor change.
 
 = 0.3.72 =
 * Preserve manual ATE/classic editing, review and pickup when disabling new automatic translation. Report selected before/after changes and partial failures.

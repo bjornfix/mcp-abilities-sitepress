@@ -198,7 +198,7 @@ function mcp_wpml_general_settings(): array {
 		if ('translation_editor' === $name) {
 			$tm = (array) $sitepress->get_setting('translation-management', array());
 			$method = $tm['doc_translation_method'] ?? null;
-			$out[$name] = \WPML_TM_Editors::ATE === $method ? 'advanced' : (ICL_TM_TMETHOD_EDITOR === $method ? 'classic' : null);
+			$out[$name] = 'ATE' === $method ? 'advanced' : (ICL_TM_TMETHOD_EDITOR === $method ? 'classic' : null);
 			continue;
 		}
 		$value = $sitepress->get_setting($name, null);
@@ -250,7 +250,7 @@ function mcp_wpml_update_general_settings($input = array()) {
 			$operation = $name;
 			$write_attempted = true;
 			if ('translation_editor' === $name) {
-				\WPML\API\Settings::assoc('translation-management', 'doc_translation_method', 'advanced' === $value ? \WPML_TM_Editors::ATE : ICL_TM_TMETHOD_EDITOR);
+				\WPML\API\Settings::assoc('translation-management', 'doc_translation_method', 'advanced' === $value ? 'ATE' : ICL_TM_TMETHOD_EDITOR);
 			} else {
 				\WPML\API\Settings::setAndSave($name, $value);
 			}
@@ -263,7 +263,10 @@ function mcp_wpml_update_general_settings($input = array()) {
 		foreach ($changes as $name => $value) { $verified = $verified && $after['settings'][$name] === $value; }
 		$controls_after = $editor ? mcp_wpml_translation_controls() : null;
 		$control_diff = $editor ? mcp_wpml_control_changes($controls_before, $controls_after) : array();
-		if ($editor) { $verified = $verified && !array_diff(array_keys($control_diff), array('document_editor', 'ate_enabled')); }
+		if ($editor) {
+			$effective = 'advanced' === $changes['translation_editor'] ? $controls_after['ate_enabled'] : !$controls_after['ate_enabled'];
+			$verified = $verified && $effective && !array_diff(array_keys($control_diff), array('document_editor', 'ate_enabled'));
+		}
 		return array('success' => $verified, 'applied' => $before['settings'] !== $after['settings'], 'before' => $before, 'after' => $after,
 			'changes' => mcp_wpml_control_changes($before['settings'], $after['settings']),
 			'controls_before' => $controls_before, 'controls_after' => $controls_after, 'control_changes' => $control_diff,

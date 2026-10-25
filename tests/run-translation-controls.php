@@ -53,9 +53,9 @@ namespace {
 	function wp_register_ability($name, $args) { $GLOBALS['abilities'][$name] = $args; }
 	function icl_cache_clear() {}
 	function do_action(...$args) { if (array('wpml_st_update_settings', 'deleteCache') !== $args) { throw new RuntimeException('Unexpected action'); } }
-	class WPML_TM_Editors { const ATE = 'ATE'; }
+	class WPML_TM_Editors { const ATE = 'ate'; }
 	class WPML_TM_Post_Edit_TM_Editor_Mode { const TM_KEY_GLOBAL_USE_NATIVE = 'native'; const TM_KEY_FOR_POST_TYPE_USE_NATIVE = 'types'; }
-	class WPML_TM_ATE_Status { public static function is_enabled() { return WPML_TM_Editors::ATE === $GLOBALS['state']['translation-management']['doc_translation_method']; } public static function is_active() { return true; } }
+	class WPML_TM_ATE_Status { public static function is_enabled() { return empty($GLOBALS['inert_ate']) && 'ATE' === $GLOBALS['state']['translation-management']['doc_translation_method']; } public static function is_active() { return true; } }
 	class WPML_TM_Jobs_Search_Params { public function __call($name, $args) {} }
 	class FixtureEmptyRepository {
 		public function get_count($p) { return !empty($GLOBALS['unfinished_ate']) ? 1 : 0; }
@@ -116,6 +116,11 @@ namespace {
 	$before_writes = $writes; $hash = $r['after']['settings_hash'];
 	$r = run('update-general-settings', array('changes' => array('translation_editor' => 'advanced'), 'confirm' => true, 'expected_settings_hash' => $hash));
 	check($r['success'] && !$r['applied'] && $writes === $before_writes, 'Editor replay was not idempotent');
+	$state['translation-management']['doc_translation_method'] = 1;
+	$hash = run('get-general-settings')['settings_hash']; $inert_ate = true;
+	$r = run('update-general-settings', array('changes' => array('translation_editor' => 'advanced'), 'confirm' => true, 'expected_settings_hash' => $hash));
+	check(!$r['success'] && $r['applied'] && !$r['controls_after']['ate_enabled'] && $r['verification_required'], 'Stored editor name falsely confirmed effective ATE');
+	$inert_ate = false; $hash = run('get-general-settings')['settings_hash'];
 	$fail_editor = true;
 	$r = run('update-general-settings', array('changes' => array('translation_editor' => 'classic'), 'confirm' => true, 'expected_settings_hash' => $hash));
 	check(!$r['success'] && $r['partial'] && 'classic' === $r['after']['settings']['translation_editor'], 'Saved editor failure falsely reported no change');

@@ -172,7 +172,7 @@ function mcp_wpml_job_rows(array $input): array {
 }
 
 /** Read status through WPML's authenticated client; discard URLs and response text. */
-function mcp_wpml_ate_statuses(array $ids): array {
+function mcp_wpml_ate_statuses(array $ids, array &$issues = array()): array {
 	$statuses = array();
 	$ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
 	if (!$ids) {
@@ -181,20 +181,31 @@ function mcp_wpml_ate_statuses(array $ids): array {
 	try {
 		$api = \WPML\Container\make(\WPML_TM_ATE_API::class);
 	} catch (Throwable $error) {
+		$issues[] = array('stage' => 'client_initialization', 'reason' => 'native_client_unavailable');
+		return $statuses;
+	}
+	if (!is_callable(array($api, 'get_jobs'))) {
+		$issues[] = array('stage' => 'status_request', 'reason' => 'unsupported_native_status_api');
 		return $statuses;
 	}
 	foreach (array_chunk($ids, 50) as $chunk) {
 		try {
 			$response = $api->get_jobs($chunk);
 		} catch (Throwable $error) {
+			$issues[] = array('stage' => 'status_request', 'reason' => 'native_exception', 'job_count' => count($chunk));
 			continue;
 		}
 		if (is_wp_error($response)) {
+			$issues[] = array('stage' => 'status_request', 'reason' => 'remote_error', 'job_count' => count($chunk));
 			continue;
 		}
 		$data = json_decode((string) wp_json_encode($response), true);
 		$items = isset($data['jobs']) && is_array($data['jobs']) ? $data['jobs'] : $data;
-		foreach ((array) $items as $item) {
+		if (!is_array($items)) {
+			$issues[] = array('stage' => 'status_response', 'reason' => 'invalid_response', 'job_count' => count($chunk));
+			continue;
+		}
+		foreach ($items as $item) {
 			if (!is_array($item)) {
 				continue;
 			}
@@ -204,6 +215,8 @@ function mcp_wpml_ate_statuses(array $ids): array {
 				$statuses[$id] = (int) $status;
 			}
 		}
+		$missing = array_diff($chunk, array_keys($statuses));
+		if ($missing) { $issues[] = array('stage' => 'status_response', 'reason' => 'missing_statuses', 'job_count' => count($missing)); }
 	}
 	return $statuses;
 }
@@ -212,7 +225,8 @@ function mcp_wpml_ate_statuses(array $ids): array {
 function mcp_wpml_job_snapshot(array $input): array {
 	$rows = mcp_wpml_job_rows($input);
 	$unfinished = array_filter($rows, static fn(array $row): bool => !$row['local_completed']);
-	$statuses = !empty($input['check_ate']) ? mcp_wpml_ate_statuses(array_column($unfinished, 'ate_id')) : array();
+	$issues = array();
+	$statuses = !empty($input['check_ate']) ? mcp_wpml_ate_statuses(array_column($unfinished, 'ate_id'), $issues) : array();
 	$pending = array();
 	$unknown = array();
 	foreach ($rows as &$row) {
@@ -235,7 +249,7 @@ function mcp_wpml_job_snapshot(array $input): array {
 	return array('rows' => $rows, 'pending' => $pending, 'unverified_ate_jobs' => $unknown,
 		'external_verification_complete' => empty($unknown), 'external_verification_requested' => !empty($input['check_ate']),
 		'external_verification_status' => $unknown ? (!empty($input['check_ate']) ? 'unavailable_or_incomplete' : 'not_requested') : 'complete',
-		'verification_scope' => 'unfinished_jobs', 'scope' => $input);
+		'external_verification_issues' => $issues, 'verification_scope' => 'unfinished_jobs', 'scope' => $input);
 }
 
 /** Read native translation management and optionally verify external ATE status. */
@@ -249,6 +263,7 @@ function mcp_wpml_list_translation_jobs($input = array()) {
 			'verification_scope' => $snapshot['verification_scope'],
 			'local_inventory_complete' => true, 'external_verification_requested' => $snapshot['external_verification_requested'],
 			'external_verification_status' => $snapshot['external_verification_status'],
+			'external_verification_issues' => $snapshot['external_verification_issues'],
 			'unverified_ate_count' => count($snapshot['unverified_ate_jobs']));
 	} catch (Throwable $error) {
 		return new WP_Error('mcp_wpml_job_read_failed', 'The local native WPML job inventory could not be read completely. Queue state is unknown. No jobs were changed.', array('local_inventory_complete' => false, 'queue_state' => 'unknown', 'jobs_changed' => false));

@@ -10,7 +10,7 @@ function current_user_can(...$args) { return false; }
 function wp_register_ability($name, $args) { if (isset($GLOBALS['abilities'][$name])) { throw new RuntimeException('Duplicate ability.'); } $GLOBALS['abilities'][$name] = $args; }
 require dirname(__DIR__) . '/mcp-abilities-sitepress.php';
 mcp_wpml_register_abilities();
-if (54 !== count($abilities)) { throw new RuntimeException('Expected 54 full-plugin abilities.'); }
+if (57 !== count($abilities)) { throw new RuntimeException('Expected 57 full-plugin abilities.'); }
 foreach ($abilities as $name => $ability) {
     if (!is_callable($ability['execute_callback']) || !is_callable($ability['permission_callback']) || $ability['permission_callback']()) { throw new RuntimeException('Invalid callback or anonymous access: ' . $name); }
 }

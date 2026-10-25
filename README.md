@@ -2,18 +2,18 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.73](https://img.shields.io/badge/release-0.3.73-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.74](https://img.shields.io/badge/release-0.3.74-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.73 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.74 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
 ## What It Does
 
-The plugin exposes 54 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
+The plugin exposes 57 WordPress abilities for WPML language discovery, translation groups, translation shells, link checks, content checks, and selected integration repairs. WPML keeps ownership of language relationships. WordPress keeps ownership of posts, terms, media, and permissions.
 
 It can identify a translated service page that still links to the original contact page, show the linked replacement, and apply that replacement when requested. It can also distinguish a missing translation from an existing draft that can be reused.
 
@@ -79,6 +79,9 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/get-diagnostics` | Read selected component, language, control and registration status without a debug dump |
 | `wpml/clear-translation-cache` | Refresh the native WPML cache without deleting content or jobs |
 | `wpml/get-registration-status` | Read Installer availability and site-key presence; license validity is not checked |
+| `wpml/get-pricing-notice-state` | Read fixed pricing-notice policy and safe native-render evidence |
+| `wpml/set-pricing-notice-hidden` | Preview or confirm hiding/restoring only the exact standalone WPML pricing notice through Unnotifier |
+| `wpml/get-update-channel-status` | Inspect redacted native Installer feed metadata and optional normal update-check observations |
 | `wpml/get-registration-workflow` | Locate the secure native registration screen without accepting or returning keys |
 | `wpml/list-strings` | Read a bounded content-string domain through the existing native WPML API |
 | `wpml/get-string` | Read one selected registered string and its translations |
@@ -269,7 +272,19 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 3. Upload it through **Plugins → Add New → Upload Plugin**, then activate it.
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
+## Pricing Notice and Commercial Updates
+
+The pricing-notice Interface has one fixed target: the standalone WPML pricing-upgrade/onboarding notice. It requires active Unnotifier in individual mode and `manage_options`. Preview, then confirm `hidden` with the returned `state_hash`. No arbitrary notice ID, HTML, callback, file or code input is accepted. The passive Adapter uses the native captured fingerprint during normal administrator rendering; MCP never executes notice callbacks. Exact text and source must match. Mixed groups, errors, security, license and update notices remain visible.
+
+Native global preferences make the selected target apply to its normal audience. `visibility_verified` remains false until an actual native render proves before/after visibility and unchanged other records. Setting `hidden: false` restores only entries owned by this Adapter. A human restore in Unnotifier takes precedence and disables automatic re-hiding. Native storage failure returns partial readback; unknown settings and other preferences are preserved. Raw notices, nonces and user identities are never returned.
+
+Commercial update status requires `manage_options` and `update_plugins`. It projects only known native Installer capability counts, channel/version enums and optional safe observations of normal WordPress update checks. No keys, account details, raw feeds, registration, downloads or billing actions are exposed. A missing update offer does not establish license validity, staged rollout or provider health.
+
 ## Recent Changes
+
+### 0.3.74
+
+Add a fixed-target, reversible native Unnotifier Adapter for the standalone WPML pricing notice, with render proof and partial-write recovery. Add redacted native commercial update-channel inspection. Preserve all other notices, settings and administrator boundaries.
 
 ### 0.3.73
 

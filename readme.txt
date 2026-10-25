@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.73
+Stable tag: 0.3.74
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ WPML translation, language metadata, and language-switcher recovery abilities fo
 
 == Description ==
 
-Version 0.3.66 adds selected registered-string source-language correction through WPML's native language setter. It preserves text and translation metadata, requires reviewed source/translation hashes and native permissions, and blocks active translation work. Version 0.3.65 adds explicit selection of registered admin-option string domains through native WPML inventory and translation APIs. It preserves original values, native permissions, reviewed source/target hashes and active job progress. Version 0.3.64 preserves existing translated content and native Elementor documents during URL-only saves. URL updates require the MCP Expose Abilities translation-sibling guard and refuse missing protection. Native slug uniqueness and old-slug history remain in use. The plugin also translates the caption or title that native Elementor images use when stored alt text is empty. Empty stored alt fields, explicit alternative text and original image rendering are preserved. Publicly selected native image and gallery alt text can also use String Translation when an old attachment parent is unpublished. Hidden private titles, captions and descriptions remain excluded. The plugin also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin exposes 54 abilities for selected native WPML workflows with existing WordPress and WPML permissions, including bounded repair for misplaced Elementor thumbnail references without regenerating image files.
+Version 0.3.66 adds selected registered-string source-language correction through WPML's native language setter. It preserves text and translation metadata, requires reviewed source/translation hashes and native permissions, and blocks active translation work. Version 0.3.65 adds explicit selection of registered admin-option string domains through native WPML inventory and translation APIs. It preserves original values, native permissions, reviewed source/target hashes and active job progress. Version 0.3.64 preserves existing translated content and native Elementor documents during URL-only saves. URL updates require the MCP Expose Abilities translation-sibling guard and refuse missing protection. Native slug uniqueness and old-slug history remain in use. The plugin also translates the caption or title that native Elementor images use when stored alt text is empty. Empty stored alt fields, explicit alternative text and original image rendering are preserved. Publicly selected native image and gallery alt text can also use String Translation when an old attachment parent is unpublished. Hidden private titles, captions and descriptions remain excluded. The plugin also displays translated attachment text in native Elementor Pro Gallery, lightboxes and retained-ID image tooltips while retaining the original image IDs, files, sizing and layout. Existing translated media fields are reused. Missing text can be translated through the native WPML String Translation domain MCP Media Text without creating another attachment. Source text remains visible until its translation is supplied. The plugin exposes 57 abilities for selected native WPML workflows with existing WordPress and WPML permissions, including bounded repair for misplaced Elementor thumbnail references without regenerating image files.
 
 
 This plugin exposes core WPML translation workflows through MCP:
@@ -41,6 +41,9 @@ This plugin exposes core WPML translation workflows through MCP:
 * `wpml/list-translation-jobs`
 * `wpml/preview-translation-job-cancellation`
 * `wpml/cancel-translation-jobs`
+* `wpml/get-pricing-notice-state`
+* `wpml/set-pricing-notice-hidden`
+* `wpml/get-update-channel-status`
 * `wpml/get-administration-coverage`
 * `wpml/list-page-translation-status`
 * `wpml/ensure-page-translation`
@@ -117,6 +120,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.74 =
+* Add fixed-target, reversible pricing-notice hiding through native Unnotifier individual mode and normal administrator rendering. Preserve all other notices, unknown settings and human restore choices.
+* Add safe commercial Installer feed/update-check metadata without account data, keys, raw notices or arbitrary callback execution.
 
 = 0.3.73 =
 * Use the native document-editor ATE value, distinct from the lowercase job-editor enum.

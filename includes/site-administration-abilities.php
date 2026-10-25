@@ -187,6 +187,7 @@ function mcp_wpml_general_setting_schema(): array {
 	foreach (array('sync_page_ordering', 'sync_page_parent', 'sync_page_template', 'sync_ping_status', 'sync_comment_status',
 		'sync_sticky_flag', 'sync_post_format', 'sync_post_date', 'tm_block_retranslating_terms') as $name) { $schema[$name] = array('type' => 'boolean'); }
 	$schema['translated_document_page_url'] = array('type' => 'string', 'enum' => array('auto-generate', 'copy-encoded', 'translate'));
+	$schema['translation_editor'] = array('type' => 'string', 'enum' => array('advanced', 'classic'));
 	return $schema;
 }
 
@@ -194,6 +195,12 @@ function mcp_wpml_general_settings(): array {
 	global $sitepress;
 	$out = array();
 	foreach (mcp_wpml_general_setting_schema() as $name => $schema) {
+		if ('translation_editor' === $name) {
+			$tm = (array) $sitepress->get_setting('translation-management', array());
+			$method = $tm['doc_translation_method'] ?? null;
+			$out[$name] = \WPML_TM_Editors::ATE === $method ? 'advanced' : (ICL_TM_TMETHOD_EDITOR === $method ? 'classic' : null);
+			continue;
+		}
 		$value = $sitepress->get_setting($name, null);
 		$out[$name] = null === $value ? null : ('boolean' === $schema['type'] ? (bool) $value : (string) $value);
 	}
@@ -208,6 +215,9 @@ function mcp_wpml_get_general_settings($input = array()) {
 }
 
 function mcp_wpml_update_general_settings($input = array()) {
+	$before = null;
+	$operation = 'preflight';
+	$write_attempted = false;
 	try {
 		$changes = (array) ($input['changes'] ?? array());
 		$schema = mcp_wpml_general_setting_schema();
@@ -216,20 +226,57 @@ function mcp_wpml_update_general_settings($input = array()) {
 			if (('boolean' === $schema[$name]['type'] && !is_bool($value))
 				|| ('string' === $schema[$name]['type'] && !in_array($value, $schema[$name]['enum'], true))) { return new WP_Error('mcp_wpml_invalid_setting', 'A selected setting has an invalid value.'); }
 		}
+		$editor = isset($changes['translation_editor']);
+		if ($editor && 1 !== count($changes)) { return new WP_Error('mcp_wpml_editor_scope', 'Change the translation editor on its own. No controls were changed.'); }
 		$before = mcp_wpml_get_general_settings();
 		if (is_wp_error($before)) { return $before; }
-		if (true !== ($input['confirm'] ?? false)) { return array('success' => true, 'applied' => false, 'before' => $before, 'changes' => $changes); }
+		$controls_before = $editor ? mcp_wpml_translation_controls() : null;
+		if (true !== ($input['confirm'] ?? false)) { return array('success' => true, 'applied' => false, 'before' => $before, 'changes' => $changes, 'controls_before' => $controls_before); }
 		if (($input['expected_settings_hash'] ?? '') !== $before['settings_hash']) { return new WP_Error('mcp_wpml_stale_settings', 'Settings changed after review.'); }
-		foreach ($changes as $name => $value) {
-			if ($before['settings'][$name] !== $value) { \WPML\API\Settings::setAndSave($name, $value); }
+		if ($editor && 'advanced' === $changes['translation_editor'] && 'advanced' !== $before['settings']['translation_editor']) {
+			if ($controls_before['translate_everything'] || $controls_before['translate_drafts']) {
+				return new WP_Error('mcp_wpml_automation_active', 'Disable automatic pickup and drafts before changing to the Advanced Translation Editor. No controls were changed.');
+			}
+			// Enabling ATE can restore delivery eligibility for existing work.
+			$snapshot = mcp_wpml_job_snapshot(array('include_history' => true, 'check_ate' => false));
+			foreach ($snapshot['rows'] as $row) {
+				if (!$row['local_completed'] && $row['ate_id'] > 0) {
+					return new WP_Error('mcp_wpml_editor_delivery_risk', 'Unfinished ATE work exists. Review its native delivery state before enabling ATE. No controls were changed.');
+				}
+			}
 		}
-		icl_cache_clear();
+		foreach ($changes as $name => $value) {
+			if ($before['settings'][$name] === $value) { continue; }
+			$operation = $name;
+			$write_attempted = true;
+			if ('translation_editor' === $name) {
+				\WPML\API\Settings::assoc('translation-management', 'doc_translation_method', 'advanced' === $value ? \WPML_TM_Editors::ATE : ICL_TM_TMETHOD_EDITOR);
+			} else {
+				\WPML\API\Settings::setAndSave($name, $value);
+			}
+		}
+		$operation = 'readback';
+		if ($write_attempted && !$editor) { icl_cache_clear(); }
 		$after = mcp_wpml_get_general_settings();
-		if (is_wp_error($after)) { return $after; }
+		if (is_wp_error($after)) { throw new RuntimeException('Readback unavailable.'); }
 		$verified = true;
 		foreach ($changes as $name => $value) { $verified = $verified && $after['settings'][$name] === $value; }
-		return array('success' => $verified, 'applied' => true, 'before' => $before, 'after' => $after);
-	} catch (Throwable $error) { return new WP_Error('mcp_wpml_settings_update_failed', 'Native settings update failed. Re-read the selected settings to check partial changes.'); }
+		$controls_after = $editor ? mcp_wpml_translation_controls() : null;
+		$control_diff = $editor ? mcp_wpml_control_changes($controls_before, $controls_after) : array();
+		if ($editor) { $verified = $verified && !array_diff(array_keys($control_diff), array('document_editor', 'ate_enabled')); }
+		return array('success' => $verified, 'applied' => $before['settings'] !== $after['settings'], 'before' => $before, 'after' => $after,
+			'changes' => mcp_wpml_control_changes($before['settings'], $after['settings']),
+			'controls_before' => $controls_before, 'controls_after' => $controls_after, 'control_changes' => $control_diff,
+			'write_outcome' => 'read_back', 'verification_required' => !$verified);
+	} catch (Throwable $error) {
+		if (!$write_attempted) { return new WP_Error('mcp_wpml_settings_preflight_failed', 'Native settings or job inventory could not be read. No settings were changed.'); }
+		$after = mcp_wpml_get_general_settings();
+		$readable = !is_wp_error($after);
+		return array('success' => false, 'before' => $before, 'after' => $readable ? $after : null,
+			'changes' => $readable ? mcp_wpml_control_changes($before['settings'], $after['settings']) : null,
+			'partial' => $readable ? $before['settings'] !== $after['settings'] : null,
+			'failed_operation' => $operation, 'write_outcome' => $readable ? 'read_back' : 'unknown', 'verification_required' => true);
+	}
 }
 
 function mcp_wpml_get_registration_status($input = array()) {
@@ -293,7 +340,7 @@ function mcp_wpml_register_site_administration_abilities(): void {
 		'set-default-site-language' => array('Set Default Site Language', 'Preview or confirm an active native default language. Native locale and user-language effects remain.', 'mcp_wpml_set_default_site_language', array('code' => $code, 'expected_default' => $code, 'confirm' => $confirm), array('code'), false, true, true),
 		'set-term-language-details' => array('Set Term Language Details', 'Register missing language details for an editable term through the public WPML hook. Existing links are preserved.', 'mcp_wpml_set_term_language_details', array('term_id' => $id, 'taxonomy' => $tax, 'language_code' => $code, 'confirm' => $confirm), array('term_id', 'taxonomy', 'language_code'), false, false, true),
 		'link-term-translation' => array('Link Term Translation', 'Preview or link two editable terms in the same translated taxonomy. Reject occupied languages and existing multi-term groups.', 'mcp_wpml_link_term_translation', array('source_term_id' => $id, 'target_term_id' => $id, 'taxonomy' => $tax, 'target_language' => $code, 'confirm' => $confirm), array('source_term_id', 'target_term_id', 'taxonomy', 'target_language'), false, false, true),
-		'get-general-settings' => array('Get General Settings', 'Read selected scalar native WPML synchronization and translated-slug settings without raw options or registration data.', 'mcp_wpml_get_general_settings', array(), array(), true, false, true),
+		'get-general-settings' => array('Get General Settings', 'Read selected scalar native WPML synchronization, translated-slug and translation-editor settings without raw options or registration data.', 'mcp_wpml_get_general_settings', array(), array(), true, false, true),
 		'update-general-settings' => array('Update General Settings', 'Preview or confirm an allowlisted native settings patch against the reviewed settings hash. Other settings remain intact.', 'mcp_wpml_update_general_settings', array('changes' => array('type' => 'object', 'properties' => mcp_wpml_general_setting_schema(), 'additionalProperties' => false, 'minProperties' => 1), 'expected_settings_hash' => array('type' => 'string', 'pattern' => '^[a-f0-9]{64}$'), 'confirm' => $confirm), array('changes'), false, true, true),
 		'get-diagnostics' => array('Get WPML Diagnostics', 'Read selected native component versions, language/control state and API availability. No full debug dump, secrets or remote probe.', 'mcp_wpml_get_diagnostics', array(), array(), true, false, true),
 		'clear-translation-cache' => array('Clear Translation Cache', 'Refresh the native WPML translation cache. Preserve stored content, language relationships and jobs.', 'mcp_wpml_clear_translation_cache', array('confirm' => $confirm), array('confirm'), false, false, true),

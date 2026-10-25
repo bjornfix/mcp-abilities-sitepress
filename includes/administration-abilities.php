@@ -37,69 +37,75 @@ function mcp_wpml_translation_controls(): array {
 
 /** A settings read must not initialize or expose WPML account data. */
 function mcp_wpml_get_translation_controls($input = array()): array {
-	return array('success' => true, 'controls' => mcp_wpml_translation_controls());
+	$controls = mcp_wpml_translation_controls();
+	return array('success' => true, 'controls' => $controls, 'controls_hash' => hash('sha256', (string) wp_json_encode($controls)));
 }
 
-/** Disable translation automation through the native WPML settings Interfaces. */
+/** Report selected controls only, including a write that failed after saving. */
+function mcp_wpml_control_changes(array $before, array $after): array {
+	$diff = array();
+	foreach ($before as $key => $value) {
+		if (array_key_exists($key, $after) && $value !== $after[$key]) {
+			$diff[$key] = array('before' => $value, 'after' => $after[$key]);
+		}
+	}
+	return $diff;
+}
+
+/** Disable automatic pickup without selecting an editor or changing existing delivery. */
 function mcp_wpml_enable_manual_translation($input = array()) {
-	if (empty($input['confirm'])) {
-		return new WP_Error('mcp_wpml_confirmation_required', 'Review the translation controls and explicitly confirm manual translation mode.');
+	if (true !== ($input['confirm'] ?? false)) {
+		return new WP_Error('mcp_wpml_confirmation_required', 'Review the translation controls and explicitly confirm disabling automatic translation.');
 	}
 	global $sitepress;
-	if (class_exists('WPML\\StringTranslation\\Infrastructure\\Setting\\Repository\\SettingsRepository')
+	$settings_class = '\\WPML\\StringTranslation\\Infrastructure\\Setting\\Repository\\SettingsRepository';
+	if (class_exists($settings_class)
 		&& !current_user_can('wpml_manage_string_translation') && !current_user_can('manage_translations')) {
 		return new WP_Error('mcp_wpml_permission_denied', 'Native String Translation management permission is required. No controls were changed.');
 	}
 	$before = mcp_wpml_translation_controls();
+	if (isset($input['expected_controls_hash']) && $input['expected_controls_hash'] !== hash('sha256', (string) wp_json_encode($before))) {
+		return new WP_Error('mcp_wpml_stale_controls', 'Translation controls changed after review. No controls were changed.');
+	}
 	$operation = 'translate_everything';
+	$failed = null;
 	try {
-		// Do not dispatch wpml_set_translate_everything: its listener hides existing jobs.
-		\WPML\Setup\Option::setTranslateEverything(false);
-		\WPML\Setup\Option::setTranslateEverythingDrafts(0);
-		\WPML\Setup\Option::setReviewMode(\WPML\Setup\Option::HOLD_FOR_REVIEW);
-		\WPML\Setup\Option::setTranslationMode(array('myself'));
-		// The classic editor is a supported native choice. The global native switch below
-		// selects WordPress editing, while disabling ATE's receive and background hooks.
-		$operation = 'document_editor';
-		\WPML\API\Settings::assoc('translation-management', 'doc_translation_method', ICL_TM_TMETHOD_EDITOR);
-		$operation = 'native_editor';
-		$editor = new \WPML\TM\PostEditScreen\Endpoints\SetEditorMode($sitepress);
-		$editor->run(wpml_collect(array('enabledEditor' => 'native', 'editorModeFor' => 'global')));
-		$settings_class = '\\WPML\\StringTranslation\\Infrastructure\\Setting\\Repository\\SettingsRepository';
-		if (class_exists($settings_class)) {
+		// The action wpml_set_translate_everything hides existing jobs. Do not dispatch it.
+		if ($before['translate_everything']) { \WPML\Setup\Option::setTranslateEverything(false); }
+		$operation = 'translate_drafts';
+		if ($before['translate_drafts']) { \WPML\Setup\Option::setTranslateEverythingDrafts(0); }
+		if (class_exists($settings_class) && (!$before['string_autoregistration_disabled'] || $before['backend_string_autoregistration'])) {
 			$operation = 'string_collection';
 			$urls = new \WPML\StringTranslation\Infrastructure\Setting\Repository\UrlRepository($sitepress);
 			$strings = new $settings_class($sitepress, $urls);
 			$interface = '\\WPML\\StringTranslation\\Application\\Setting\\Repository\\SettingsRepositoryInterface';
-			$strings->setAutoregisterStringsTypeSetting(constant($interface . '::AUTOREGISTER_STRINGS_TYPE_DISABLED'));
-			$strings->setShouldRegisterBackendStringsSetting(false);
+			if (!$before['string_autoregistration_disabled']) {
+				$strings->setAutoregisterStringsTypeSetting(constant($interface . '::AUTOREGISTER_STRINGS_TYPE_DISABLED'));
+			}
+			if ($before['backend_string_autoregistration']) { $strings->setShouldRegisterBackendStringsSetting(false); }
 			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Native WPML String Translation cache invalidation.
 			do_action('wpml_st_update_settings', 'deleteCache');
 		}
-		$operation = 'manual_delivery';
-		$pickup = new \WPML_Update_PickUp_Method($sitepress);
-		$project = class_exists('TranslationProxy') ? \TranslationProxy::get_current_project() : false;
-		if ($project) {
-			$pickup_result = $pickup->update_pickup_method(array('icl_translation_pickup_method' => ICL_PRO_TRANSLATION_PICKUP_POLLING), $project);
-			if ('ok' !== $pickup_result) {
-				return new WP_Error('mcp_wpml_pickup_failed', 'WPML could not confirm manual delivery. Re-read the controls; the other changes may have succeeded.');
-			}
-		} else {
-			// No translation-service project exists: preserve other SitePress settings.
-			$sitepress->set_setting('translation_pickup_method', ICL_PRO_TRANSLATION_PICKUP_POLLING, true);
-		}
-		$after = mcp_wpml_translation_controls();
-		$verified = !$after['translate_everything'] && !$after['translate_drafts'] && !$after['ate_enabled']
-			&& $after['native_editor_default'] && empty($after['native_editor_post_types'])
-			&& $after['string_autoregistration_disabled'] && !$after['backend_string_autoregistration']
-			&& ICL_PRO_TRANSLATION_PICKUP_POLLING === $after['translation_pickup_method'];
-		return array('success' => $verified, 'before' => $before, 'after' => $after,
-			'new_automatic_translation_disabled' => $verified,
-			'existing_external_jobs_cancelled' => false,
-			'note' => 'Existing external work is not cancelled or refunded. Re-enabling ATE can restore delivery eligibility.');
 	} catch (Throwable $error) {
-		return new WP_Error('mcp_wpml_manual_mode_failed', 'A native WPML operation failed: ' . $operation . '. Re-read the controls to check partial changes.');
+		$failed = $operation;
 	}
+	try {
+		$after = mcp_wpml_translation_controls();
+	} catch (Throwable $error) {
+		return array('success' => false, 'before' => $before, 'after' => null, 'changes' => null,
+			'failed_operation' => $failed ?? 'readback', 'write_outcome' => 'unknown', 'verification_required' => true,
+			'existing_external_jobs_cancelled' => false);
+	}
+	$diff = mcp_wpml_control_changes($before, $after);
+	$preserved = !array_diff(array_keys($diff), array('translate_everything', 'translate_drafts', 'string_autoregistration', 'string_autoregistration_disabled', 'backend_string_autoregistration'));
+	$disabled = !$after['translate_everything'] && !$after['translate_drafts'] && $after['string_autoregistration_disabled'] && !$after['backend_string_autoregistration'];
+	$verified = null === $failed && $disabled && $preserved;
+	return array('success' => $verified, 'before' => $before, 'after' => $after, 'changes' => $diff,
+		'applied' => !empty($diff), 'partial' => !$verified && !empty($diff), 'failed_operation' => $failed,
+		'write_outcome' => 'read_back', 'verification_required' => !$verified,
+		'new_automatic_translation_disabled' => $disabled, 'other_controls_preserved' => $preserved,
+		'existing_external_jobs_cancelled' => false,
+		'note' => 'The manual editor, review mode and service pickup are preserved. Existing external work is not paused, cancelled or delivered by this operation.');
 }
 
 /** The latest native repository entries plus previous jobs from the same RID. */
@@ -172,9 +178,17 @@ function mcp_wpml_ate_statuses(array $ids): array {
 	if (!$ids) {
 		return $statuses;
 	}
-	$api = \WPML\Container\make(\WPML_TM_ATE_API::class);
+	try {
+		$api = \WPML\Container\make(\WPML_TM_ATE_API::class);
+	} catch (Throwable $error) {
+		return $statuses;
+	}
 	foreach (array_chunk($ids, 50) as $chunk) {
-		$response = $api->get_jobs($chunk);
+		try {
+			$response = $api->get_jobs($chunk);
+		} catch (Throwable $error) {
+			continue;
+		}
 		if (is_wp_error($response)) {
 			continue;
 		}
@@ -197,7 +211,8 @@ function mcp_wpml_ate_statuses(array $ids): array {
 /** Annotate current and historical jobs without equating an unreadable ATE state to empty. */
 function mcp_wpml_job_snapshot(array $input): array {
 	$rows = mcp_wpml_job_rows($input);
-	$statuses = !empty($input['check_ate']) ? mcp_wpml_ate_statuses(array_column($rows, 'ate_id')) : array();
+	$unfinished = array_filter($rows, static fn(array $row): bool => !$row['local_completed']);
+	$statuses = !empty($input['check_ate']) ? mcp_wpml_ate_statuses(array_column($unfinished, 'ate_id')) : array();
 	$pending = array();
 	$unknown = array();
 	foreach ($rows as &$row) {
@@ -218,7 +233,9 @@ function mcp_wpml_job_snapshot(array $input): array {
 	}
 	unset($row);
 	return array('rows' => $rows, 'pending' => $pending, 'unverified_ate_jobs' => $unknown,
-		'external_verification_complete' => empty($unknown), 'verification_scope' => 'unfinished_jobs', 'scope' => $input);
+		'external_verification_complete' => empty($unknown), 'external_verification_requested' => !empty($input['check_ate']),
+		'external_verification_status' => $unknown ? (!empty($input['check_ate']) ? 'unavailable_or_incomplete' : 'not_requested') : 'complete',
+		'verification_scope' => 'unfinished_jobs', 'scope' => $input);
 }
 
 /** Read native translation management and optionally verify external ATE status. */
@@ -230,9 +247,11 @@ function mcp_wpml_list_translation_jobs($input = array()) {
 			'jobs' => array_slice($snapshot['rows'], (int) $input['offset'], (int) $input['limit']),
 			'external_verification_complete' => $snapshot['external_verification_complete'],
 			'verification_scope' => $snapshot['verification_scope'],
+			'local_inventory_complete' => true, 'external_verification_requested' => $snapshot['external_verification_requested'],
+			'external_verification_status' => $snapshot['external_verification_status'],
 			'unverified_ate_count' => count($snapshot['unverified_ate_jobs']));
 	} catch (Throwable $error) {
-		return new WP_Error('mcp_wpml_job_read_failed', 'The native WPML job inventory could not be read completely. No jobs were changed.');
+		return new WP_Error('mcp_wpml_job_read_failed', 'The local native WPML job inventory could not be read completely. Queue state is unknown. No jobs were changed.', array('local_inventory_complete' => false, 'queue_state' => 'unknown', 'jobs_changed' => false));
 	}
 }
 
@@ -409,7 +428,7 @@ function mcp_wpml_administration_coverage($input = array()): array {
 		'languages_and_relationships' => array('supported' => array('wpml/list-active-languages', 'wpml/get-site-languages', 'wpml/add-site-language', 'wpml/set-active-site-languages', 'wpml/set-default-site-language', 'wpml/get-post-translations', 'wpml/get-term-translations', 'wpml/link-post-translation', 'wpml/set-post-language-details', 'wpml/set-term-language-details', 'wpml/link-term-translation'), 'missing' => array('Delete language content', 'Edit existing language names, flags and display translations', 'Language-pack downloads and native language setup notices')),
 		'translations_and_strings' => array('supported' => array('wpml/ensure-post-translation', 'wpml/update-translated-post-url', 'wpml/update-contact-form-7-translation-form', 'wpml/list-strings', 'wpml/get-string', 'wpml/update-string-translation'), 'registered_option_strings' => 'Select an exact registered admin_texts_* domain with include_option_strings; native administrator and String Translation permissions are required.', 'missing' => array('Unregistered option values', 'String registration, deletion and catalog import/export', 'Updates to waiting or in-progress/partial string targets')),
 		'jobs_and_ate' => array('supported' => array('wpml/list-translation-jobs', 'wpml/preview-translation-job-cancellation', 'wpml/cancel-translation-jobs', 'wpml/list-local-translators', 'wpml/assign-local-translation-job', 'wpml/create-local-translation-job'), 'missing' => array('Grant translator roles or language pairs', 'External/automatic/ATE dispatch and assignment', 'Resend jobs for an existing target relationship or job history', 'String/package job dispatch', 'Atomic coordination with concurrent native UI edits')),
-		'settings' => array('supported' => array('wpml/get-translation-controls', 'wpml/enable-manual-translation', 'wpml/get-language-switcher-settings', 'wpml/get-general-settings', 'wpml/update-general-settings'), 'missing' => array('Settings outside the synchronization and translated-slug allowlist', 'Raw options, URL domains, access roles and account settings')),
+		'settings' => array('supported' => array('wpml/get-translation-controls', 'wpml/enable-manual-translation', 'wpml/get-language-switcher-settings', 'wpml/get-general-settings', 'wpml/update-general-settings'), 'missing' => array('Settings outside the synchronization, translated-slug and translation-editor allowlist', 'Raw options, URL domains, access roles and account settings')),
 		'diagnostics' => array('supported' => array('wpml/audit-translation-integrity', 'wpml/audit-translated-links', 'wpml/audit-translation-coverage', 'wpml/get-diagnostics', 'wpml/clear-translation-cache'), 'missing' => array('Full debug dumps and external connectivity probes', 'Database schema repair, destructive reset and orphan-job repair')),
 		'registration' => array('supported' => array('wpml/get-registration-status', 'wpml/get-registration-workflow'), 'requires_secure_user_step' => array('WPML registration and site-key replacement in the native secure form', 'New access or account connections'), 'missing' => array('License validity verification', 'Registration-key input/output, payments and subscriptions')),
 	);
@@ -423,7 +442,7 @@ function mcp_wpml_register_administration_abilities(): void {
 	$scope_schema = array('type' => 'array', 'items' => array('type' => 'integer', 'minimum' => 1), 'maxItems' => 200, 'uniqueItems' => true, 'default' => array());
 	$definitions = array(
 		'get-translation-controls' => array('Get Translation Controls', 'Read redacted native WPML automation, editor, delivery and account-status controls.', 'mcp_wpml_get_translation_controls', array(), array(), true, false, true),
-		'enable-manual-translation' => array('Enable Manual Translation', 'Disable new automatic translation, ATE delivery, automatic string collection and automatic service pickup using native WPML settings. Does not cancel external jobs.', 'mcp_wpml_enable_manual_translation', array('confirm' => array('type' => 'boolean', 'default' => false)), array('confirm'), false, true, true),
+		'enable-manual-translation' => array('Enable Manual Translation', 'Disable new automatic pickup, automatic drafts and string collection. Preserve the manual editor, review and service pickup. Does not pause or cancel existing work.', 'mcp_wpml_enable_manual_translation', array('confirm' => array('type' => 'boolean', 'default' => false), 'expected_controls_hash' => array('type' => 'string', 'pattern' => '^[a-f0-9]{64}$')), array('confirm'), false, true, true),
 		'list-translation-jobs' => array('List Translation Jobs', 'Read current and historical native WPML jobs. Optional ATE status verification never treats unknown jobs as an empty queue.', 'mcp_wpml_list_translation_jobs', array('source_ids' => $scope_schema, 'include_history' => array('type' => 'boolean', 'default' => true), 'check_ate' => array('type' => 'boolean', 'default' => false), 'offset' => array('type' => 'integer', 'minimum' => 0, 'default' => 0), 'limit' => array('type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 100)), array(), true, false, true),
 		'preview-translation-job-cancellation' => array('Preview Translation Job Cancellation', 'Read the whole pending queue or selected source groups, verify ATE status, and bind exact affected jobs to a short-lived user preview. Finished translations are excluded.', 'mcp_wpml_preview_translation_job_cancellation', array('source_ids' => $scope_schema), array(), false, false, false),
 		'cancel-translation-jobs' => array('Cancel Translation Jobs', 'Cancel only an exact verified preview through native WPML and ATE mechanisms. Requires acknowledgement of lost progress, rejects stale local state and verifies remaining jobs.', 'mcp_wpml_cancel_translation_jobs', array('preview_id' => array('type' => 'string', 'pattern' => '^[a-f0-9-]{36}$'), 'confirm' => array('type' => 'boolean', 'default' => false), 'acknowledge_loss' => array('type' => 'boolean', 'default' => false)), array('preview_id', 'confirm', 'acknowledge_loss'), false, true, true),

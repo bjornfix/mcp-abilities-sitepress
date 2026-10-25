@@ -2,12 +2,12 @@
 
 Find missing WPML translations, manage selected native language and string settings, reuse the right translated post, and repair links that still send readers back to the source language. MCP Abilities - SitePress gives an authenticated assistant access to these jobs inside WordPress.
 
-[![Release 0.3.71](https://img.shields.io/badge/release-0.3.71-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
+[![Release 0.3.72](https://img.shields.io/badge/release-0.3.72-blue.svg)](https://downloads.devenia.com/mcp-abilities-sitepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 0.3.71 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
+**Stable tag:** 0.3.72 · **Tested up to:** WordPress 7.1 · **License:** GPLv2 or later
 
 **Tags:** mcp, wpml, translation, ai, automation
 
@@ -74,7 +74,7 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/set-default-site-language` | Preview or choose an active default through native locale and language controls |
 | `wpml/set-term-language-details` | Register missing metadata for an editable translated-taxonomy term |
 | `wpml/link-term-translation` | Link editable terms while rejecting occupied slots and linked groups |
-| `wpml/get-general-settings` | Read selected synchronization and translated-slug settings with a review hash |
+| `wpml/get-general-settings` | Read selected synchronization, translated-slug and translation-editor settings with a review hash |
 | `wpml/update-general-settings` | Preview or save an allowlisted native settings patch against the reviewed hash |
 | `wpml/get-diagnostics` | Read selected component, language, control and registration status without a debug dump |
 | `wpml/clear-translation-cache` | Refresh the native WPML cache without deleting content or jobs |
@@ -88,7 +88,7 @@ Ask your assistant to inspect a source page's translation group and report which
 | `wpml/assign-local-translation-job` | Preview or assign a current waiting local manual job to an existing translator |
 | `wpml/create-local-translation-job` | Preview or dispatch a first local manual job when no target relationship or job history exists |
 | `wpml/get-translation-controls` | Read selected automation, editor, delivery and ATE activation controls without keys |
-| `wpml/enable-manual-translation` | Disable new automatic translation, ATE delivery and string collection through native settings |
+| `wpml/enable-manual-translation` | Disable automatic pickup, drafts and string collection while preserving the manual editor |
 | `wpml/list-translation-jobs` | List current and historical jobs, with optional external ATE status checks |
 | `wpml/preview-translation-job-cancellation` | Preview exact unfinished jobs and the consequences of cancellation |
 | `wpml/cancel-translation-jobs` | Cancel a confirmed current preview and verify local and external state |
@@ -173,7 +173,7 @@ This operation accepts one editable image and explicit Elementor custom size key
 
 ### Manual translation and job administration
 
-Read `wpml/get-translation-controls` before requesting `wpml/enable-manual-translation` with `{"confirm": true}`. Manual mode selects native WordPress editing, the classic WPML document editor, review before publishing, manual service pickup, and disabled automatic draft translation and string collection. Selecting the global native editor clears per-post editor overrides through WPML's own controls. It preserves language relationships and translation content. Existing external jobs and previously consumed credits are not cancelled or refunded. Re-enabling ATE can make old work deliverable again.
+Read `wpml/get-translation-controls` before requesting `wpml/enable-manual-translation` with `{"confirm": true}` and, optionally, the reviewed `expected_controls_hash`. This disables new automatic pickup, automatic drafts and automatic string collection. The manual ATE/classic editor, native-editor overrides, review mode, translation mode and service pickup remain unchanged. Results include selected before/after values and their diff. A saved partial change remains visible when a native write fails. Existing external jobs and consumed credits are not paused, cancelled or refunded.
 
 List jobs with `wpml/list-translation-jobs`:
 
@@ -181,7 +181,7 @@ List jobs with `wpml/list-translation-jobs`:
 {"source_ids": [123], "include_history": true, "check_ate": true, "limit": 100}
 ```
 
-An empty `source_ids` array covers the native site queue. The native repository supplies current jobs; WPML's previous-job operation supplies history for those groups. Unknown external status is reported explicitly. `external_verification_complete` describes unfinished jobs; finished translations are excluded from cancellation. Translation-service jobs that cannot be safely cancelled through the local native workflow remain blockers.
+An empty `source_ids` array covers the native site queue. The native repository supplies current jobs; WPML's previous-job operation supplies history for those groups. External verification covers unfinished jobs only. A client exception or unavailable external result preserves the local inventory and explicitly reports unverified ATE work; it never means an empty queue. A local inventory failure remains a separate error. `external_verification_complete` describes unfinished jobs; finished translations are excluded from cancellation. Translation-service jobs that cannot be safely cancelled through the local native workflow remain blockers.
 
 Request `wpml/preview-translation-job-cancellation` with the reviewed source scope. It returns the exact IDs, count, loss warning and a preview valid for fifteen minutes for the same authenticated user. Only after authorizing that exact action, call `wpml/cancel-translation-jobs`:
 
@@ -189,9 +189,11 @@ Request `wpml/preview-translation-job-cancellation` with the reviewed source sco
 {"preview_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "confirm": true, "acknowledge_loss": true}
 ```
 
-The ID above is illustrative. Cancellation requires ATE delivery to be disabled through native manual controls. It rejects changed local jobs, unreadable external state and missing acknowledgement. ATE cancellation and the absence of deliverable XLIFF in the native priority response must be confirmed before local changes. Failure can leave partial external cancellation; re-read the queue before retrying. Native state transitions preserve completed translations. A repeated successful preview returns its receipt and reads current queue state without cancelling newly added jobs. Cancellation can discard unfinished progress and does not refund consumed credits. The preview does not grant permission by itself.
+The ID above is illustrative. Cancellation requires ATE delivery to be disabled separately through native controls; disabling automatic pickup alone preserves ATE. It rejects changed local jobs, unreadable external state and missing acknowledgement. ATE cancellation and the absence of deliverable XLIFF in the native priority response must be confirmed before local changes. Failure can leave partial external cancellation; re-read the queue before retrying. Native state transitions preserve completed translations. A repeated successful preview returns its receipt and reads current queue state without cancelling newly added jobs. Cancellation can discard unfinished progress and does not refund consumed credits. The preview does not grant permission by itself.
 
 `wpml/get-administration-coverage` reports remaining gaps. This release does not provide full WPML administration, registration-key entry, account connections, payments or subscriptions.
+
+Separate editor selection uses `wpml/update-general-settings` with `{"changes":{"translation_editor":"advanced"}}` or `"classic"`. Review the preview, then provide its `expected_settings_hash` and `confirm: true`. Submit editor selection alone. It changes only the native document-editor field and leaves automation, review, pickup and native-editor overrides intact. Enabling Advanced requires automatic pickup and drafts off plus a complete native inventory without unfinished ATE work. No translation is started to verify the editor.
 
 ### Languages, terms and selected settings
 
@@ -268,6 +270,10 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Confirm that the `wpml/` abilities are available to the intended WordPress user.
 
 ## Recent Changes
+
+### 0.3.72
+
+Preserve the manual translation editor when disabling automation. Add a separate reviewed native editor patch and precise partial-write readback. Preserve local queue results when external ATE verification is unavailable; query only unfinished ATE work.
 
 ### 0.3.71
 

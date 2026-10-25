@@ -3,6 +3,7 @@
 declare(strict_types=1);
 namespace WPML\Container {
 	function make($class) {
+		if (!empty($GLOBALS['fail_container'])) { throw new \RuntimeException('SECRET'); }
 		return str_ends_with($class, 'SyncLock') || str_ends_with($class, 'KeyedLock') ? new \FixtureLock() : $GLOBALS['ate_api'];
 	}
 }
@@ -68,15 +69,15 @@ namespace {
 		public function is_automatic() { return false; }
 	}
 	class FixtureRepository {
-		public function get_count($p) { return count($this->get_all($p)); }
+		public function get_count($p) { if (!empty($GLOBALS['fail_local'])) { throw new RuntimeException('SECRET'); } return count($this->get_all($p)); }
 		public function get_all($p) { return array_values(array_filter($GLOBALS['jobs'], fn($j) => !$p->sources || in_array($j->source, $p->sources, true))); }
 		public function get($p) { return array_slice($this->get_all($p), $p->offset, $p->limit); }
 		public function get_job($rid, $type) { foreach ($GLOBALS['jobs'] as $j) { if ($rid === $j->rid) { return $j; } } return null; }
 	}
 	function wpml_tm_get_jobs_repository(...$args) { return new FixtureRepository(); }
 	class FixtureAPI {
-		public $statuses = array(), $fail = false, $cancel_failure = false, $delivery_available = false, $cancel_calls = 0;
-		public function get_jobs($ids) { if ($this->fail) { return new WP_Error('remote', 'SECRET should never be exposed'); } return array_map(fn($id) => array('ate_job_id' => $id, 'status_id' => $this->statuses[$id] ?? 1, 'editor_url' => 'SECRET'), $ids); }
+		public $statuses = array(), $queries = array(), $throw = false, $fail = false, $cancel_failure = false, $delivery_available = false, $cancel_calls = 0;
+		public function get_jobs($ids) { $this->queries[] = $ids; if ($this->throw) { throw new RuntimeException('SECRET'); } if ($this->fail) { return new WP_Error('remote', 'SECRET should never be exposed'); } return array_map(fn($id) => array('ate_job_id' => $id, 'status_id' => $this->statuses[$id] ?? 1, 'editor_url' => 'SECRET'), $ids); }
 		public function cancelJobs($ids) { ++$this->cancel_calls; if ($this->cancel_failure) { return new WP_Error('remote', 'SECRET'); } foreach ($ids as $id) { $this->statuses[$id] = 20; } return array('success' => true); }
 		public function get_job_status_with_priority($id) { return array(array('ate_job_id' => $id, 'status_id' => $this->statuses[$id] ?? 1, 'translated_xliff' => $this->delivery_available ? 'SECRET' : null)); }
 	}
@@ -85,7 +86,7 @@ namespace {
 	$ate_api = new FixtureAPI();
 	$sequence = 0;
 	$jobs = array(new WPML_TM_Post_Job_Entity(1, 101, 201, 1), new WPML_TM_Post_Job_Entity(2, 102, 202, 10), new WPML_TM_Post_Job_Entity(3, 103, 203, 2, 303));
-	require dirname(__DIR__) . '/includes/administration-abilities.php';
+	require (getenv('MCP_WPML_SOURCE_DIR') ?: dirname(__DIR__)) . '/includes/administration-abilities.php';
 	mcp_wpml_register_administration_abilities();
 	$run = function ($slug, $input = array()) use (&$abilities) { return ($abilities['wpml/' . $slug]['execute_callback'])($input); };
 	$check = function ($ok, $message) { if (!$ok) { throw new RuntimeException($message); } };
@@ -130,5 +131,25 @@ namespace {
 	$jobs[] = new WPML_TM_Post_Job_Entity(4, 104, 204, 1);
 	$again = $run('cancel-translation-jobs', array('preview_id' => $p['preview_id'], 'confirm' => true, 'acknowledge_loss' => true));
 	$check($again['idempotent_replay'] && 2 === $writes && !$again['queue_currently_empty'] && 1 === $again['current_pending_count'], 'Repeat cancelled an unseen new job or returned stale queue state.');
+	// Local inventory and external verification have separate failure semantics.
+	$jobs = array(new WPML_TM_Post_Job_Entity(11, 111, 211, 10, 311), new WPML_TM_Post_Job_Entity(12, 112, 212, 2, 312));
+	$ate_api->queries = array(); $ate_api->throw = true;
+	$r = $run('list-translation-jobs', array('check_ate' => true));
+	$check(!is_wp_error($r) && $r['local_inventory_complete'] && 2 === $r['total'] && 1 === $r['pending_count'] && 1 === $r['unverified_ate_count'], 'External exception destroyed local inventory.');
+	$check(!$r['external_verification_complete'] && 'unavailable_or_incomplete' === $r['external_verification_status'], 'Unknown ATE state reported complete.');
+	$check(array(array(312)) === $ate_api->queries && !str_contains(json_encode($r), 'SECRET'), 'Completed jobs queried externally or exception leaked.');
+	$fail_container = true;
+	$r = $run('list-translation-jobs', array('check_ate' => true));
+	$check(!is_wp_error($r) && 1 === $r['unverified_ate_count'], 'ATE dependency construction failure destroyed local inventory.');
+	$fail_container = false; $ate_api->throw = false;
+	$r = $run('list-translation-jobs', array('check_ate' => false));
+	$check('not_requested' === $r['external_verification_status'] && !$r['external_verification_requested'], 'Skipped external read reported as verified.');
+	$jobs = array($jobs[0]); $ate_api->queries = array();
+	$r = $run('list-translation-jobs', array('check_ate' => true));
+	$check($r['external_verification_complete'] && !$ate_api->queries, 'Finished-only queue required ATE connectivity.');
+	$fail_local = true;
+	$r = $run('list-translation-jobs');
+	$check(is_wp_error($r) && 'mcp_wpml_job_read_failed' === $r->code && !str_contains(json_encode($r), 'SECRET'), 'Local inventory failure returned an empty queue or leaked an exception.');
+	$fail_local = false;
 	echo "PASS: registered callbacks, permissions, completion exclusion, redaction, loss confirmation, stale preview, remote failure, native transition, readback and repeat safety\n";
 }

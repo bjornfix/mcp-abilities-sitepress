@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, wpml, translation, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 0.3.71
+Stable tag: 0.3.72
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -91,7 +91,11 @@ Elementor’s existing signed public previews use the previewed post’s WPML la
 
 Read native administrative languages, including hidden active languages, before changing activation or the default. Deactivation retains stored translations. Default changes retain WPML locale/user-language effects. These controls retain language lifecycle hooks but do not download language packs or create native setup notices. Term linking rejects occupied languages and existing linked groups and requires edit access to both terms.
 
-Settings changes accept only the selected synchronization and translated-slug allowlist. Review a preview and confirm against the current settings hash. Other options, domains, roles and account settings remain outside this Interface.
+`wpml/enable-manual-translation` now disables new automatic pickup, drafts and automatic string collection while preserving manual ATE/classic editing, review and service pickup. Existing work is not paused or cancelled. External verification failures preserve local queue results and explicitly mark unfinished ATE work unverified.
+
+Select the manual editor separately with `wpml/update-general-settings`, `changes.translation_editor` set to advanced or classic, a reviewed expected_settings_hash and confirm=true. Submit editor selection alone. Advanced selection requires automatic pickup and drafts off and a complete native inventory without unfinished ATE work. The operation does not dispatch jobs or change native-editor overrides.
+
+Settings changes accept only the selected synchronization, translated-slug and translation-editor allowlist. Review a preview and confirm against the current settings hash. Other options, domains, roles and account settings remain outside this Interface.
 
 String inventory uses the existing native WPML API with the current user and a native REST nonce. Select an exact registered domain. Registered admin_texts_* option-string domains require include_option_strings=true and native administrator permission on list, get and update calls. Arbitrary WordPress option values are never read. Target updates require reviewed source/target hashes, an active target language and draft/complete state. Waiting and in-progress/partial targets are preserved. WPML owns text normalization and translation-file generation; review actual saved values.
 
@@ -113,6 +117,11 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 4. Activate the plugin
 
 == Changelog ==
+
+= 0.3.72 =
+* Preserve manual ATE/classic editing, review and pickup when disabling new automatic translation. Report selected before/after changes and partial failures.
+* Add a separate hash-reviewed translation-editor patch. Refuse mixed settings and unsafe reactivation while unfinished ATE work exists.
+* Preserve local job inventory during external ATE failure and check only unfinished ATE work.
 
 = 0.3.71 =
 * Use automatic WordPress loading of an optional site-managed translation catalog for the missing Formidable file helper. Sites without a catalog keep the original text; existing translations and other domains remain unchanged.
